@@ -55,6 +55,7 @@ cask "slack"
 cask "spotify"
 cask "telegram"
 cask "anydesk"
+cask "jdownloader"
 
 mas "Keynote", id: 409183694
 mas "Numbers", id: 409203825
@@ -62,6 +63,7 @@ mas "Pages", id: 409201541
 mas "iMovie", id: 408981434
 mas "GarageBand", id: 682658836
 mas "Swift Playgrounds", id: 1496833156
+mas "TweetDeck", id 485812721
 mas "Audiobook Binder", id: 413969927
 mas "Klib - Organize Highlights", id: 1196268448
 mas "Be Focused Pro", id: 961632517
