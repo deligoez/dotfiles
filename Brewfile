@@ -6,10 +6,16 @@ tap "homebrew/cask-fonts"
 
 cask_args appdir: "/Applications"
 
-brew "zsh"
-brew "zsh-autosuggestions"
-brew "zsh-completions"
-brew "zsh-syntax-highlighting"
+# Shell
+brew "fish"
+
+# Services
+brew "dnsmasq"
+brew "php"
+brew "mysql"
+brew "redis"
+
+# Brews
 brew "openssl"
 brew "readline"
 brew "zlib"
@@ -19,12 +25,8 @@ brew "vim"
 brew "neovim"
 brew "wget"
 brew "mas"
-brew "dnsmasq"
-brew "php"
 brew "composer"
-brew "mysql"
 brew "sqlite"
-brew "redis"
 brew "node"
 brew "npm"
 brew "python"
