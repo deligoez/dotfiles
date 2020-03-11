@@ -1,5 +1,11 @@
-#!/bin/sh
+#!/usr/local/bin/fish
 
 composer global require hirak/prestissimo
-composer global require laravel/valet
-composer global require laravel-zero/installer
+
+composer global require \
+  laravel/installer \
+  laravel/valet \
+  laravel-zero/installer \
+  friendsofphp/php-cs-fixer \
+  phploc/phploc \
+  phpmetrics/phpmetrics
