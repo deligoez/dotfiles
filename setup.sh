@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/zsh
 
 git clone https://github.com/deligoez/dotfiles.git ~/Sites/dotfiles/
 
