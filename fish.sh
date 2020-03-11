@@ -1,3 +1,5 @@
-brew install fish
-which fish | sudo tee -a /etc/shells
-chsh -s `which fish`
+#!/bin/zsh
+
+export FISH_PATH=`which fish`
+$FISH_PATH | sudo tee -a /etc/shells
+chsh -s $FISH_PATH
