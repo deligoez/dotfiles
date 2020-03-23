@@ -15,12 +15,14 @@ brew "dnsmasq"
 brew "php"
 brew "mysql"
 brew "redis"
+brew "nginx"
 
 # Brews
 brew "openssl"
 brew "readline"
 brew "zlib"
 brew "httpie"
+brew "pkg-config"
 brew "git"
 brew "github/gh/gh"
 brew "vim"
@@ -34,6 +36,8 @@ brew "npm"
 brew "python"
 brew "ruby"
 brew "starship"
+brew "ghostscript"
+brew "imagemagick"
 
 # Casks
 cask "1password"
