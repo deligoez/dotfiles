@@ -2,4 +2,6 @@
 
 pecl install insall \
   xdebug \
-  redis
+  redis \
+  memcached \
+  imagick
