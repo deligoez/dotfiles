@@ -1,5 +1,6 @@
 #!/bin/zsh
 
-echo "⏳ Setting up your Mac..."
+echo "🍏🍏🍏 Setting up your Mac..."
+echo ""
 
-zsh brew.sh
+zsh osx.sh
