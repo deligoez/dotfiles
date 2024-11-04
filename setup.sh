@@ -64,7 +64,7 @@ if [ -d "$DOTFILES_DIR" ]; then
     fi
 
     # Fetch remote changes
-    echo "⏳ Checking for remote changes..."
+    echo "🏦 Checking for remote changes..."
     echo ""
     if ! git fetch origin master; then
         echo "❌ Failed to fetch from remote"
@@ -76,6 +76,7 @@ if [ -d "$DOTFILES_DIR" ]; then
     REMOTE=$(git rev-parse @{u})
 
     if [ "$LOCAL" = "$REMOTE" ]; then
+        echo ""
         echo "🏦 Dotfiles are up to date"
     else
         # Try to fast-forward merge
@@ -106,5 +107,5 @@ cd "$DOTFILES_DIR" || {
 }
 echo ""
 
-zsh ./osx.sh
+zsh ./install.sh
 
