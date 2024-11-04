@@ -69,8 +69,8 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 10
 # Login Window                                                                #
 ###############################################################################
 
-echo "🍏 LoginWindow: Show language menu in the top right corner of the boot screen"
-sudo defaults write /Library/Preferences/com.apple.loginwindow showInputMenu -bool true
+#echo "🍏 LoginWindow: Show language menu in the top right corner of the boot screen"
+#sudo defaults write /Library/Preferences/com.apple.loginwindow showInputMenu -bool true
 
 ###############################################################################
 # Energy                                                                      #
@@ -199,6 +199,33 @@ defaults write com.apple.TextEdit RichText -int 0
 echo "🍏 TextEdit: Open and save files as UTF-8 in TextEdit."
 defaults write com.apple.TextEdit PlainTextEncoding -int 4
 defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+
+echo "🍏 NetworkBrowser: Enable AirDrop over Ethernet and on unsupported Macs running Lion"
+defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
+
+echo "🍏 Terminal: Only use UTF-8"
+defaults write com.apple.terminal StringEncodings -array 4
+
+echo "🍏 Terminal: Enable Secure Keyboard Entry"
+# See: https://security.stackexchange.com/a/47786/8918
+defaults write com.apple.terminal SecureKeyboardEntry -bool true
+
+###############################################################################
+# Activity Monitor                                                            #
+###############################################################################
+
+echo "🍏 ActivityMonitor: Show the main window when launching"
+defaults write com.apple.ActivityMonitor OpenMainWindow -bool true
+
+echo "🍏 ActivityMonitor: Visualize CPU usage in the Dock icon"
+defaults write com.apple.ActivityMonitor IconType -int 5
+
+echo "🍏 ActivityMonitor: Show all processes"
+defaults write com.apple.ActivityMonitor ShowCategory -int 0
+
+echo "🍏 ActivityMonitor: Sort results by CPU usage"
+defaults write com.apple.ActivityMonitor SortColumn -string "CPUUsage"
+defaults write com.apple.ActivityMonitor SortDirection -int 0
 
 killall WindowManager
 killall Dock
