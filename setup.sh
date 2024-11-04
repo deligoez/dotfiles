@@ -63,7 +63,7 @@ if [ -d "$DOTFILES_DIR" ]; then
 
     # Fetch remote changes
     echo "⏳ Checking for remote changes..."
-    if ! git fetch origin main; then
+    if ! git fetch origin master; then
         echo "❌ Failed to fetch from remote"
         exit 1
     fi
@@ -81,7 +81,7 @@ if [ -d "$DOTFILES_DIR" ]; then
             exit 1
         else
             echo "⏳ Pulling latest changes..."
-            if ! git pull --ff-only origin main; then
+            if ! git pull --ff-only origin master; then
                 echo "❌ Failed to pull changes"
                 exit 1
             fi
