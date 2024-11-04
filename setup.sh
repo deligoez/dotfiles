@@ -1,7 +1,9 @@
 #!/bin/zsh
 
-git clone https://github.com/deligoez/dotfiles.git ~/Sites/dotfiles/
+#git clone https://github.com/deligoez/dotfiles.git ~/Sites/dotfiles/
 
-cd ~/Sites/dotfiles/
+#cd ~/Sites/dotfiles/
 
-zsh ./install.sh
+#zsh ./install.sh
+
+zsh ./osx.sh
