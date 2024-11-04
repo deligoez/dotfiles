@@ -9,8 +9,15 @@ if ! sudo -v; then
 fi
 echo ""
 
-# Keep sudo timeout refreshed
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+# Export a variable to indicate sudo was initialized
+export SUDO_INITIALIZED=1
+
+# Keep sudo timeout refreshed in background
+(while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null) &
+SUDO_KEEP_ALIVE_PID=$!
+
+# Ensure cleanup on exit
+trap 'kill -9 $SUDO_KEEP_ALIVE_PID' EXIT
 
 echo "🍺🍺🍺 Setting up Homebrew..."
 echo ""
@@ -108,5 +115,4 @@ cd "$DOTFILES_DIR" || {
 }
 echo ""
 
-zsh ./install.sh
-
+source ./install.sh
