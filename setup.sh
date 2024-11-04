@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+DOTFILES_DIR="$HOME/Developer/dotfiles"
+
 # Check sudo privileges
 if ! sudo -v; then
     echo "❌ This script requires sudo privileges"
@@ -43,9 +45,26 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-git clone https://github.com/deligoez/dotfiles.git ~/Developer/dotfiles/
+# Check if dotfiles directory already exists
+if [ -d "$DOTFILES_DIR" ]; then
+    echo "✅ Dotfiles already cloned at $DOTFILES_DIR"
+else
+    echo "⏳ Cloning dotfiles..."
+    git clone https://github.com/deligoez/dotfiles.git "$DOTFILES_DIR"
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to clone dotfiles"
+        exit 1
+    fi
+    echo "✅ Dotfiles cloned successfully"
+fi
 
-cd ~/Sites/dotfiles/
+# Change to dotfiles directory
+echo "⏳ Changing to dotfiles directory..."
+cd "$DOTFILES_DIR" || {
+    echo "❌ Failed to change to dotfiles directory"
+    exit 1
+}
+echo "✅ Now in dotfiles directory"
 
 #zsh ./install.sh
 
