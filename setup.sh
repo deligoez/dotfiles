@@ -2,7 +2,7 @@
 
 DOTFILES_DIR="$HOME/Developer/dotfiles"
 
-echo "✅ Check sudo privileges..."
+echo "⚡️ Check sudo privileges..."
 if ! sudo -v; then
     echo "❌ This script requires sudo privileges"
     exit 1
@@ -29,7 +29,7 @@ if (( ! $+commands[brew] )); then
         exit 1
     fi
 else
-    echo "✅ Homebrew is already installed"
+    echo "🍺 Homebrew is already installed"
 fi
 
 echo "🍺 Turning off Homebrew analytics..."
@@ -65,6 +65,7 @@ if [ -d "$DOTFILES_DIR" ]; then
 
     # Fetch remote changes
     echo "⏳ Checking for remote changes..."
+    echo ""
     if ! git fetch origin master; then
         echo "❌ Failed to fetch from remote"
         exit 1
@@ -87,6 +88,7 @@ if [ -d "$DOTFILES_DIR" ]; then
                 echo "❌ Failed to pull changes"
                 exit 1
             fi
+            echo ""
             echo "🏦 Successfully updated dotfiles"
         fi
     fi
@@ -96,10 +98,8 @@ else
         echo "❌ Failed to clone dotfiles"
         exit 1
     fi
-    echo "🏦 Dotfiles cloned successfully"
 fi
 
-echo "🏦 Changing to dotfiles directory..."
 cd "$DOTFILES_DIR" || {
     echo "❌ Failed to change to dotfiles directory"
     exit 1
