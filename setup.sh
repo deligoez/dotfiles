@@ -45,13 +45,52 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Check if dotfiles directory already exists
+# Check and manage dotfiles repository
 if [ -d "$DOTFILES_DIR" ]; then
-    echo "✅ Dotfiles already cloned at $DOTFILES_DIR"
+    echo "📂 Dotfiles directory exists at $DOTFILES_DIR"
+
+    # Change to dotfiles directory
+    cd "$DOTFILES_DIR" || {
+        echo "❌ Failed to change to dotfiles directory"
+        exit 1
+    }
+
+    # Check if there are any local changes
+    if ! git diff --quiet HEAD; then
+        echo "❌ Local dotfiles have uncommitted changes. Please commit or stash them first."
+        exit 1
+    fi
+
+    # Fetch remote changes
+    echo "⏳ Checking for remote changes..."
+    if ! git fetch origin main; then
+        echo "❌ Failed to fetch from remote"
+        exit 1
+    fi
+
+    # Check if local is behind remote
+    LOCAL=$(git rev-parse HEAD)
+    REMOTE=$(git rev-parse @{u})
+
+    if [ "$LOCAL" = "$REMOTE" ]; then
+        echo "✅ Dotfiles are up to date"
+    else
+        # Try to fast-forward merge
+        if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+            echo "❌ Local and remote histories have diverged. Please resolve manually."
+            exit 1
+        else
+            echo "⏳ Pulling latest changes..."
+            if ! git pull --ff-only origin main; then
+                echo "❌ Failed to pull changes"
+                exit 1
+            fi
+            echo "✅ Successfully updated dotfiles"
+        fi
+    fi
 else
     echo "⏳ Cloning dotfiles..."
-    git clone https://github.com/deligoez/dotfiles.git "$DOTFILES_DIR"
-    if [ $? -ne 0 ]; then
+    if ! git clone https://github.com/deligoez/dotfiles.git "$DOTFILES_DIR"; then
         echo "❌ Failed to clone dotfiles"
         exit 1
     fi
