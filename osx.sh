@@ -70,14 +70,14 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 10
 ###############################################################################
 
 echo "🍏 LoginWindow: Show language menu in the top right corner of the boot screen"
-defaults write /Library/Preferences/com.apple.loginwindow showInputMenu -bool true
+sudo -n defaults write /Library/Preferences/com.apple.loginwindow showInputMenu -bool true
 
 ###############################################################################
 # Energy                                                                      #
 ###############################################################################
 
 echo "🍏 Energy: Disable machine sleep while charging"
-pmset -c sleep 0
+sudo -n pmset -c sleep 0
 
 ###############################################################################
 # Screen                                                                      #
@@ -98,7 +98,7 @@ echo "🍏 Screen: Enable subpixel font rendering on non-Apple LCDs"
 defaults write NSGlobalDomain AppleFontSmoothing -int 1
 
 echo "🍏 Screen: Enable HiDPI display modes (requires restart)"
-defaults write /Library/Preferences/com.apple.windowserver DisplayResolutionEnabled -bool true
+sudo -n defaults write /Library/Preferences/com.apple.windowserver DisplayResolutionEnabled -bool true
 
 ###############################################################################
 # Finder                                                                      #
