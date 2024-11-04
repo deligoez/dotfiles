@@ -12,6 +12,9 @@ echo ""
 # Keep sudo timeout refreshed
 while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
+osascript -e 'tell application "Terminal" to set the font size of window 1 to 14'
+defaults write com.apple.Terminal "FontSize" -int 14
+
 echo "🍺🍺🍺 Setting up Homebrew..."
 if (( ! $+commands[brew] )); then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
