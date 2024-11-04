@@ -9,12 +9,10 @@ if ! sudo -v; then
 fi
 echo ""
 
-# Keep sudo timeout refreshed in background and store its PID
-(while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null) &
-SUDO_KEEP_ALIVE_PID=$!
+# Keep sudo timeout refreshed
+while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
 echo "🍺🍺🍺 Setting up Homebrew..."
-echo ""
 if (( ! $+commands[brew] )); then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     if [ $? -ne 0 ]; then
@@ -109,11 +107,5 @@ cd "$DOTFILES_DIR" || {
 }
 echo ""
 
-# Execute everything in the same shell
-(
-    cd "$(dirname "$0")" || exit 1
-    source ./install.sh
-)
+source ./install.sh
 
-# Cleanup sudo keep-alive on exit
-kill -9 $SUDO_KEEP_ALIVE_PID
