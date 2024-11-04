@@ -77,7 +77,7 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 10
 ###############################################################################
 
 echo "🍏 Energy: Disable machine sleep while charging"
-sudo pmset -c sleep 0
+pmset -c sleep 0
 
 ###############################################################################
 # Screen                                                                      #
