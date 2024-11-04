@@ -66,6 +66,7 @@ cd "$DOTFILES_DIR" || {
 }
 echo "✅ Now in dotfiles directory"
 
+zsh ./osx.sh
+
 #zsh ./install.sh
 
-#zsh ./osx.sh
