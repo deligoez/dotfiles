@@ -9,19 +9,26 @@ fi
 # Keep sudo timeout refreshed
 while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
-# Check and install Homebrew
+echo "⏳ Installing Homebrew..."
 if (( ! $+commands[brew] )); then
-    echo "⏳ Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     if [ $? -ne 0 ]; then
         echo "❌ Homebrew installation failed"
+        exit 1
+    fi
+
+    # Set up Homebrew PATH
+    echo "⏳ Setting up Homebrew PATH..."
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to set up Homebrew PATH"
         exit 1
     fi
 else
     echo "✅ Homebrew is already installed"
 fi
 
-# Turn off Homebrew analytics
 echo "⏳ Turning off Homebrew analytics..."
 brew analytics off
 if [ $? -ne 0 ]; then
@@ -29,7 +36,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Update Homebrew
 echo "⏳ Updating Homebrew..."
 brew update
 if [ $? -ne 0 ]; then
@@ -37,9 +43,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# git clone https://github.com/deligoez/dotfiles.git ~/Developer/dotfiles/
+git clone https://github.com/deligoez/dotfiles.git ~/Developer/dotfiles/
 
-#cd ~/Sites/dotfiles/
+cd ~/Sites/dotfiles/
 
 #zsh ./install.sh
 
