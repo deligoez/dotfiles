@@ -140,6 +140,23 @@ defaults write com.apple.finder ShowStatusBar -bool true
 echo "🍏 Finder: show path bar"
 defaults write com.apple.finder ShowPathbar -bool true
 
+echo "🍏 Finder: Hide tags in sidebar"
+defaults write com.apple.finder ShowRecentTags -bool false
+
+echo "🍏 Finder: Set search scope"
+# This Mac       : `SCev`
+# Current Folder : `SCcf`
+# Previous Scope : `SCsp`
+defaults write com.apple.finder FXDefaultSearchScope SCcf
+
+echo "🍏 Finder: Set preferred view style"
+# Icon View   : `icnv`
+# List View   : `Nlsv`
+# Column View : `clmv`
+# Cover Flow  : `Flwv`
+defaults write com.apple.finder FXPreferredViewStyle Nlsv
+rm -rf ~/.DS_Store
+
 echo "🍏 Finder: Display full POSIX path as Finder window title"
 defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
 
@@ -171,6 +188,17 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 # defaults write com.apple.frameworks.diskimages auto-open-ro-root -bool true
 # defaults write com.apple.frameworks.diskimages auto-open-rw-root -bool true
 # defaults write com.apple.finder OpenWindowForNewRemovableDisk -bool true
+
+###############################################################################
+# TextEdit                                                                    #
+###############################################################################
+
+echo "🍏 TextEdit: Use plain text mode for new TextEdit documents."
+defaults write com.apple.TextEdit RichText -int 0
+
+echo "🍏 TextEdit: Open and save files as UTF-8 in TextEdit."
+defaults write com.apple.TextEdit PlainTextEncoding -int 4
+defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
 
 killall WindowManager
 killall Dock
