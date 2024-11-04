@@ -227,6 +227,44 @@ echo "🍏 ActivityMonitor: Sort results by CPU usage"
 defaults write com.apple.ActivityMonitor SortColumn -string "CPUUsage"
 defaults write com.apple.ActivityMonitor SortDirection -int 0
 
+###############################################################################
+# Mac App Store                                                               #
+###############################################################################
+
+echo "🍏 AppStore: Enable the WebKit Developer Tools"
+defaults write com.apple.appstore WebKitDeveloperExtras -bool true
+
+echo "🍏 AppStore: Enable Debug Menu"
+defaults write com.apple.appstore ShowDebugMenu -bool true
+
+echo "🍏 AppStore: Enable the automatic update check"
+defaults write com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+
+echo "🍏 AppStore: Check for software updates daily, not just once per week"
+defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 1
+
+echo "🍏 AppStore: Download newly available updates in background"
+defaults write com.apple.SoftwareUpdate AutomaticDownload -int 1
+
+echo "🍏 AppStore: Install System data files & security updates"
+defaults write com.apple.SoftwareUpdate CriticalUpdateInstall -int 1
+
+echo "🍏 AppStore: Turn on app auto-update"
+defaults write com.apple.commerce AutoUpdate -bool true
+
+echo "🍏 AppStore: Allow the App Store to reboot machine on macOS updates"
+defaults write com.apple.commerce AutoUpdateRestartRequired -bool true
+
+###############################################################################
+# Messages                                                                    #
+###############################################################################
+
+echo "🍏 Messages: Disable smart quotes as it’s annoying for messages that contain code"
+defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "automaticQuoteSubstitutionEnabled" -bool false
+
+echo "🍏 Messages: Disable continuous spell checking"
+defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "continuousSpellCheckingEnabled" -bool false
+
 killall WindowManager
 killall Dock
 killall Finder
