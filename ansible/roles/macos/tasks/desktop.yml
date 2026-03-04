@@ -30,7 +30,12 @@
     type: bool
     value: true
 
-# Icon & widget style: set manually (no known defaults key in macOS 26)
+- name: "Icon & widget style: Dark + Auto"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleIconAppearanceTheme
+    type: string
+    value: RegularAutomatic
 
 # ── Accessibility ──
 - name: Enable reduce motion
