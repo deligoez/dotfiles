@@ -28,6 +28,12 @@ DOTFILES_REPO="https://github.com/deligoez/dotfiles.git"
 
 echo "🚀 Setting up developer workstation..."
 
+# ── Ask for sudo upfront and keep it alive throughout the script ──
+sudo -v
+while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill $SUDO_KEEPALIVE_PID 2>/dev/null' EXIT
+
 # ── Detect platform ──
 if [[ "$OSTYPE" == darwin* ]]; then
     OS="macos"
@@ -79,8 +85,7 @@ echo "🔧 Running Ansible..."
 ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \
 ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     -i "$DOTFILES_DIR/ansible/inventory.yml" \
-    --limit "$OS" \
-    --ask-become-pass
+    --limit "$OS"
 
 echo ""
 echo "✅ Setup complete!"
