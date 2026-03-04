@@ -22,17 +22,9 @@
     type: bool
     value: false
 
-# ── Tips / "What's New" notifications ──
-- name: Disable Tips notifications
-  community.general.osx_defaults:
-    domain: com.apple.tips
-    key: NotificationsDisabled
-    type: bool
-    value: true
-
 # ── Wallpaper: solid turquoise ──
-- name: Set wallpaper to Turquoise Green
+- name: Set wallpaper to Space Gray Pro
   ansible.builtin.command: >
     osascript -e 'tell application "System Events" to tell every desktop
-    to set picture to "/System/Library/Desktop Pictures/Solid Colors/Turquoise Green.png"'
+    to set picture to "/System/Library/Desktop Pictures/Solid Colors/Space Gray Pro.png"'
   changed_when: true
