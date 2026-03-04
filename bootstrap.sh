@@ -1,11 +1,12 @@
 #!/usr/bin/env zsh
 # bootstrap.sh — Full developer workstation setup from scratch
-# Usage: curl -fsSL setup.deligoz.me | zsh
+# Usage: curl -fsSL dotfiles.deligoz.me | zsh
 
 set -euo pipefail
 
 DOTFILES_DIR="$HOME/Developer/github/deligoez/dotfiles"
-DOTFILES_REPO="git@github.com:deligoez/dotfiles.git"
+DOTFILES_REPO_HTTPS="https://github.com/deligoez/dotfiles.git"
+DOTFILES_REPO_SSH="git@github.com:deligoez/dotfiles.git"
 
 echo "🚀 Setting up developer workstation..."
 
@@ -59,7 +60,10 @@ fi
 if [[ ! -d "$DOTFILES_DIR" ]]; then
     echo "📦 Cloning dotfiles..."
     mkdir -p "$(dirname "$DOTFILES_DIR")"
-    git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
+    # Use HTTPS for initial clone (SSH key won't exist on clean install)
+    git clone "$DOTFILES_REPO_HTTPS" "$DOTFILES_DIR"
+    echo "💡 Tip: after setting up SSH key, switch remote to SSH:"
+    echo "   cd $DOTFILES_DIR && git remote set-url origin $DOTFILES_REPO_SSH"
 else
     echo "📁 Dotfiles exist, pulling latest..."
     git -C "$DOTFILES_DIR" pull --ff-only || true
