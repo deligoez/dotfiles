@@ -1,0 +1,10 @@
+{
+    /* macOS Cmd+Ctrl+Arrow tuşlarının sistem bip sesini engelle */
+    /* Ghostty split resize için gerekli */
+    /* Ref: https://github.com/ghostty-org/ghostty/discussions/5521 */
+
+    "@^\UF700" = "noop:";  /* Cmd+Ctrl+Up */
+    "@^\UF701" = "noop:";  /* Cmd+Ctrl+Down */
+    "@^\UF702" = "noop:";  /* Cmd+Ctrl+Left */
+    "@^\UF703" = "noop:";  /* Cmd+Ctrl+Right */
+}
