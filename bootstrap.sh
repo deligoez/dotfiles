@@ -17,7 +17,7 @@ set -euo pipefail
 # ── Re-exec with TTY when piped (curl ... | zsh) ──
 # sudo and Homebrew need a real terminal for interactive prompts
 if [[ ! -t 0 ]]; then
-    TMPFILE=$(mktemp /tmp/bootstrap.XXXXXX.sh)
+    TMPFILE="/tmp/dotfiles-bootstrap-$$.sh"
     curl -fsSL "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
     chmod +x "$TMPFILE"
     exec zsh "$TMPFILE" </dev/tty
