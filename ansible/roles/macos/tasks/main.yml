@@ -1,5 +1,9 @@
 ---
-# Hostname is set by bootstrap.sh (needs sudo)
+# Hostname and timezone are set by bootstrap.sh (needs sudo)
+
+- name: Apply locale settings
+  ansible.builtin.include_tasks: locale.yml
+  tags: [locale]
 
 - name: Apply desktop settings
   ansible.builtin.include_tasks: desktop.yml
