@@ -89,7 +89,7 @@ ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     --limit "$OS"
 
 # ── Step 6: Add 'dotfiles' alias to zsh ──
-ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && ./run.sh'"
+ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos'"
 if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
     echo "$ALIAS_LINE" >> ~/.zshrc
 fi
