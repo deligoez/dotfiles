@@ -11,6 +11,23 @@
     type: array
     value: []
 
+- name: Add Messages to Dock
+  ansible.builtin.shell: |
+    defaults write com.apple.dock persistent-apps -array-add \
+      '<dict>
+        <key>tile-data</key>
+        <dict>
+          <key>file-data</key>
+          <dict>
+            <key>_CFURLString</key>
+            <string>/System/Applications/Messages.app</string>
+            <key>_CFURLStringType</key>
+            <integer>0</integer>
+          </dict>
+        </dict>
+      </dict>'
+  changed_when: true
+
 - name: Set Dock icon size to 50px
   community.general.osx_defaults:
     domain: com.apple.dock
