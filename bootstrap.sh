@@ -79,7 +79,13 @@ else
 fi
 
 # ── Step 4: Ansible Galaxy collections ──
-ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" --force-with-deps 2>/dev/null
+ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" 2>/dev/null
+
+# ── Step 4b: Install casks that need sudo (Ansible can't prompt for password) ──
+if [[ "$OS" == "macos" ]] && [[ ! -x /usr/local/bin/desktoppr ]]; then
+    echo "📦 Installing desktoppr..."
+    brew install --cask desktoppr
+fi
 
 # ── Step 5: Hand off to Ansible ──
 echo "🔧 Running Ansible..."

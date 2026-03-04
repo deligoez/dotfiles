@@ -40,22 +40,7 @@
   changed_when: true
 
 # ── Wallpaper: solid turquoise ──
-- name: Check if desktoppr is installed
-  ansible.builtin.stat:
-    path: /usr/local/bin/desktoppr
-  register: desktoppr_bin
-
-- name: Download desktoppr pkg
-  ansible.builtin.get_url:
-    url: https://github.com/scriptingosx/desktoppr/releases/download/v0.5/desktoppr-0.5-218.pkg
-    dest: /tmp/desktoppr.pkg
-  when: not desktoppr_bin.stat.exists
-
-- name: Install desktoppr pkg
-  ansible.builtin.command: installer -pkg /tmp/desktoppr.pkg -target /
-  become: true
-  when: not desktoppr_bin.stat.exists
-
+# desktoppr is installed by bootstrap.sh (needs sudo with TTY)
 - name: Set wallpaper to turquoise
   ansible.builtin.command: /usr/local/bin/desktoppr color 40E0D0
   changed_when: true
