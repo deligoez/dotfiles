@@ -1,0 +1,21 @@
+---
+- name: Show Bluetooth in menu bar
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: "NSStatusItem VisibleCC Bluetooth"
+    type: bool
+    value: true
+
+- name: Show WiFi in menu bar
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: "NSStatusItem VisibleCC WiFi"
+    type: bool
+    value: true
+
+- name: Show Clock in menu bar
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: "NSStatusItem VisibleCC Clock"
+    type: bool
+    value: true

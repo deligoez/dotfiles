@@ -9,6 +9,10 @@
   ansible.builtin.include_tasks: desktop.yml
   tags: [desktop]
 
+- name: Apply menu bar settings
+  ansible.builtin.include_tasks: menubar.yml
+  tags: [menubar]
+
 - name: Apply dock settings
   ansible.builtin.include_tasks: dock.yml
   tags: [dock]
