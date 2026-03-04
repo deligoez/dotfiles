@@ -42,8 +42,8 @@
   community.general.osx_defaults:
     domain: com.apple.Accessibility
     key: FullKeyboardAccessEnabled
-    type: bool
-    value: true
+    type: int
+    value: 1
 
 # ── Wallpaper ──
 - name: Set wallpaper to Space Gray Pro
