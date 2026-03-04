@@ -22,7 +22,23 @@
     type: bool
     value: false
 
-# ── Wallpaper: solid turquoise ──
+# ── Accessibility ──
+- name: Reduce motion
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: reduceMotion
+    type: bool
+    value: true
+
+# ── Keyboard ──
+- name: Enable full keyboard access
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: 2
+
+# ── Wallpaper ──
 - name: Set wallpaper to Space Gray Pro
   ansible.builtin.command: >
     osascript -e 'tell application "System Events" to tell every desktop
