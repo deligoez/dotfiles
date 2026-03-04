@@ -23,24 +23,19 @@
     value: false
 
 # ── Tips / "What's New" notifications ──
-- name: Disable Tips notifications (tipsd)
-  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd
-  changed_when: true
-
-- name: Disable Tips post-install utility
-  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.postInstall-utility
-  changed_when: true
-
-- name: Disable Tips content updates
-  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.update-content
-  changed_when: true
-
-- name: Disable Tips welcome followup
-  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.welcome.followup
-  changed_when: true
+- name: Disable Tips notifications
+  community.general.osx_defaults:
+    domain: com.apple.tips
+    key: NotificationsDisabled
+    type: bool
+    value: true
 
 # ── Wallpaper: solid turquoise ──
-# desktoppr is installed by bootstrap.sh (needs sudo with TTY)
+- name: Install wallpaper CLI
+  community.general.homebrew:
+    name: wallpaper
+    state: present
+
 - name: Set wallpaper to turquoise
-  ansible.builtin.command: /usr/local/bin/desktoppr color 40E0D0
+  ansible.builtin.command: wallpaper set-solid-color 40E0D0
   changed_when: true
