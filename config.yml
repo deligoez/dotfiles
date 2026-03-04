@@ -1,2 +1,8 @@
 ---
 hostname: deligoez-mac
+timezone: Europe/Istanbul
+region: TR
+languages:
+  - en-TR
+  - tr-TR
+  - de-DE

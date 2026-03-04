@@ -93,6 +93,14 @@ if [[ "$OS" == "macos" ]]; then
         sudo scutil --set LocalHostName "$DESIRED_HOSTNAME"
         sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server NetBIOSName -string "$DESIRED_HOSTNAME"
     fi
+
+    # ── Set timezone (needs sudo) ──
+    DESIRED_TZ=$(grep '^timezone:' "$DOTFILES_DIR/config.yml" | awk '{print $2}')
+    CURRENT_TZ=$(sudo systemsetup -gettimezone 2>/dev/null | awk -F': ' '{print $2}')
+    if [[ -n "$DESIRED_TZ" && "$CURRENT_TZ" != "$DESIRED_TZ" ]]; then
+        echo "🕐 Setting timezone to $DESIRED_TZ..."
+        sudo systemsetup -settimezone "$DESIRED_TZ"
+    fi
 fi
 
 # ── Step 5: Hand off to Ansible ──

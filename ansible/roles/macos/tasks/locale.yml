@@ -1,0 +1,53 @@
+---
+# ── Languages ──
+- name: Set preferred languages
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleLanguages
+    type: array
+    value: "{{ languages }}"
+
+# ── Region ──
+- name: Set region
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleLocale
+    type: string
+    value: "en_{{ region }}"
+
+- name: Set country
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: Country
+    type: string
+    value: "{{ region }}"
+
+# ── 24-hour time ──
+- name: Enable 24-hour time
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleICUForce24HourTime
+    type: bool
+    value: true
+
+# ── Measurement & temperature ──
+- name: Set metric system
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleMeasurementUnits
+    type: string
+    value: Centimeters
+
+- name: Set metric system flag
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleMetricUnits
+    type: bool
+    value: true
+
+- name: Set temperature to Celsius
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleTemperatureUnit
+    type: string
+    value: Celsius
