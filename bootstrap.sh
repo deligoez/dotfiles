@@ -88,10 +88,13 @@ ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     -i "$DOTFILES_DIR/ansible/inventory.yml" \
     --limit "$OS"
 
+# ── Step 6: Add 'dotfiles' alias to zsh ──
+ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && ./run.sh'"
+if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
+    echo "$ALIAS_LINE" >> ~/.zshrc
+    echo "💡 Added 'dotfiles' alias — run it anytime to sync and apply."
+fi
+
 echo ""
 echo "✅ Setup complete!"
-echo ""
-echo "💡 Quick commands:"
-echo "   cd $DOTFILES_DIR && ./run.sh                 # run all"
-echo "   cd $DOTFILES_DIR && ./run.sh --tags dock      # run specific role"
-echo "   cd $DOTFILES_DIR && ./run.sh --check --diff   # dry run"
+echo "   Run 'dotfiles' to re-apply anytime."
