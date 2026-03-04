@@ -31,11 +31,8 @@
     value: true
 
 # ── Wallpaper: solid turquoise ──
-- name: Install wallpaper CLI
-  community.general.homebrew:
-    name: wallpaper
-    state: present
-
-- name: Set wallpaper to turquoise
-  ansible.builtin.command: wallpaper set-solid-color 40E0D0
+- name: Set wallpaper to Turquoise Green
+  ansible.builtin.command: >
+    osascript -e 'tell application "System Events" to tell every desktop
+    to set picture to "/System/Library/Desktop Pictures/Solid Colors/Turquoise Green.png"'
   changed_when: true
