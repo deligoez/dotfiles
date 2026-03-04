@@ -45,10 +45,16 @@
     path: /usr/local/bin/desktoppr
   register: desktoppr_bin
 
-- name: Install desktoppr
-  ansible.builtin.shell: brew install --cask desktoppr
+- name: Download desktoppr pkg
+  ansible.builtin.get_url:
+    url: https://github.com/scriptingosx/desktoppr/releases/download/v0.5/desktoppr-0.5-218.pkg
+    dest: /tmp/desktoppr.pkg
   when: not desktoppr_bin.stat.exists
-  changed_when: true
+
+- name: Install desktoppr pkg
+  ansible.builtin.command: installer -pkg /tmp/desktoppr.pkg -target /
+  become: true
+  when: not desktoppr_bin.stat.exists
 
 - name: Set wallpaper to turquoise
   ansible.builtin.command: /usr/local/bin/desktoppr color 40E0D0
