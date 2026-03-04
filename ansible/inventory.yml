@@ -1,0 +1,13 @@
+---
+all:
+  children:
+    macos:
+      hosts:
+        macos-local:
+          ansible_host: localhost
+          ansible_connection: local
+    omarchy:
+      hosts:
+        omarchy-local:
+          ansible_host: localhost
+          ansible_connection: local
