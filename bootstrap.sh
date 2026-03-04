@@ -1,10 +1,22 @@
 #!/usr/bin/env zsh
-# bootstrap.sh — Full developer workstation setup from scratch
+# bootstrap.sh — Bootstrap Ansible on a clean machine, then hand off
 # Usage: curl -fsSL dotfiles.deligoz.me | zsh
+#
+# This script does the MINIMUM to get Ansible running:
+#   1. TTY fix (for curl pipe)
+#   2. Xcode CLT (gives us git)
+#   3. Homebrew (gives us pipx)
+#   4. pipx + ansible-core
+#   5. Clone dotfiles repo
+#   6. Hand off to Ansible
+#
+# Everything else (packages, settings, services) is Ansible's job.
+# Idempotent — safe to run multiple times.
 
 set -euo pipefail
 
-# ── If piped (not a TTY), re-run with TTY so sudo/Homebrew work ──
+# ── Re-exec with TTY when piped (curl ... | zsh) ──
+# sudo and Homebrew need a real terminal for interactive prompts
 if [[ ! -t 0 ]]; then
     TMPFILE=$(mktemp /tmp/bootstrap.XXXXXX.sh)
     curl -fsSL "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
@@ -13,13 +25,11 @@ if [[ ! -t 0 ]]; then
 fi
 
 DOTFILES_DIR="$HOME/Developer/github/deligoez/dotfiles"
-DOTFILES_REPO_HTTPS="https://github.com/deligoez/dotfiles.git"
-DOTFILES_REPO_SSH="git@github.com:deligoez/dotfiles.git"
+DOTFILES_REPO="https://github.com/deligoez/dotfiles.git"
 
 echo "🚀 Setting up developer workstation..."
 
 # ── Detect platform ──
-OS="unknown"
 if [[ "$OSTYPE" == darwin* ]]; then
     OS="macos"
 elif [[ -f /etc/arch-release ]]; then
@@ -30,39 +40,35 @@ else
 fi
 echo "📋 Platform: $OS"
 
-# ── Xcode CLT (macOS) ──
-if [[ "$OS" == "macos" ]]; then
-    if ! xcode-select -p &>/dev/null; then
-        echo "📦 Installing Xcode Command Line Tools (no dialog)..."
-        # Trigger softwareupdate to list CLT as available
-        touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-        PROD=$(softwareupdate -l 2>/dev/null | \
-            grep "\*.*Command Line" | \
-            head -n 1 | awk -F"*" '{print $2}' | \
-            sed -e 's/^ *//' | tr -d '\n')
-        if [[ -n "$PROD" ]]; then
-            softwareupdate -i "$PROD" --verbose
-        else
-            echo "⚠️  Could not find CLT in softwareupdate, falling back to xcode-select..."
-            xcode-select --install
-            until xcode-select -p &>/dev/null; do sleep 5; done
-        fi
-        rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-        echo "✅ Xcode CLT installed"
+# ── Step 1: Xcode CLT (macOS only — gives us git, clang, make) ──
+if [[ "$OS" == "macos" ]] && ! xcode-select -p &>/dev/null; then
+    echo "📦 Installing Xcode Command Line Tools..."
+    touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    PROD=$(softwareupdate -l 2>/dev/null | \
+        grep "\*.*Command Line" | \
+        head -n 1 | awk -F"*" '{print $2}' | \
+        sed -e 's/^ *//' | tr -d '\n')
+    if [[ -n "$PROD" ]]; then
+        softwareupdate -i "$PROD" --verbose
+    else
+        echo "⚠️  softwareupdate couldn't find CLT, falling back to xcode-select..."
+        xcode-select --install
+        until xcode-select -p &>/dev/null; do sleep 5; done
     fi
+    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    echo "✅ Xcode CLT installed"
 fi
 
-# ── Homebrew (macOS) ──
-if [[ "$OS" == "macos" ]]; then
-    if ! command -v brew &>/dev/null; then
-        echo "📦 Installing Homebrew..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    fi
-    eval "$(/opt/homebrew/bin/brew shellenv)"
+# ── Step 2: Homebrew (macOS only — gives us pipx) ──
+if [[ "$OS" == "macos" ]] && ! command -v brew &>/dev/null; then
+    echo "📦 Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
+[[ "$OS" == "macos" ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# ── pipx + Ansible ──
-if ! command -v ansible &>/dev/null; then
+# ── Step 3: pipx + Ansible ──
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v ansible-playbook &>/dev/null; then
     echo "📦 Installing Ansible..."
     if [[ "$OS" == "macos" ]]; then
         brew install pipx
@@ -73,28 +79,23 @@ if ! command -v ansible &>/dev/null; then
         pipx ensurepath
         pipx install ansible-core
     fi
-    export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# ── Clone or update dotfiles ──
+# ── Step 4: Clone or update dotfiles ──
 if [[ ! -d "$DOTFILES_DIR" ]]; then
     echo "📦 Cloning dotfiles..."
     mkdir -p "$(dirname "$DOTFILES_DIR")"
-    # Use HTTPS for initial clone (SSH key won't exist on clean install)
-    git clone "$DOTFILES_REPO_HTTPS" "$DOTFILES_DIR"
-    echo "💡 Tip: after setting up SSH key, switch remote to SSH:"
-    echo "   cd $DOTFILES_DIR && git remote set-url origin $DOTFILES_REPO_SSH"
+    git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
 else
     echo "📁 Dotfiles exist, pulling latest..."
-    git -C "$DOTFILES_DIR" pull --ff-only || true
+    git -C "$DOTFILES_DIR" pull --ff-only 2>/dev/null || true
 fi
 
-# ── Ansible Galaxy collections ──
-echo "📦 Installing Ansible collections..."
-ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml"
+# ── Step 5: Ansible Galaxy collections ──
+ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" --force-with-deps 2>/dev/null
 
-# ── Run Ansible playbook ──
-echo "🔧 Running Ansible playbook..."
+# ── Step 6: Hand off to Ansible ──
+echo "🔧 Running Ansible..."
 ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \
 ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     -i "$DOTFILES_DIR/ansible/inventory.yml" \
