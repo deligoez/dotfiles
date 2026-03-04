@@ -1,6 +1,6 @@
 ---
-- name: Close System Preferences to prevent override
-  ansible.builtin.command: osascript -e 'tell application "System Preferences" to quit'
+- name: Close System Settings to prevent override
+  ansible.builtin.command: osascript -e 'tell application "System Settings" to quit'
   changed_when: false
   failed_when: false
 
