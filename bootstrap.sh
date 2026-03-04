@@ -47,7 +47,7 @@ fi
 echo "📋 Platform: $OS"
 
 # ── Step 1: Homebrew (macOS only — installs Xcode CLT automatically) ──
-if [[ "$OS" == "macos" ]] && ! command -v brew &>/dev/null; then
+if [[ "$OS" == "macos" ]] && [[ ! -x /opt/homebrew/bin/brew ]]; then
     echo "📦 Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
