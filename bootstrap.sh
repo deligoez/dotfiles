@@ -4,11 +4,10 @@
 #
 # This script does the MINIMUM to get Ansible running:
 #   1. TTY fix (for curl pipe)
-#   2. Xcode CLT (gives us git)
-#   3. Homebrew (gives us pipx)
-#   4. pipx + ansible-core
-#   5. Clone dotfiles repo
-#   6. Hand off to Ansible
+#   2. Homebrew (installs Xcode CLT automatically)
+#   3. pipx + ansible-core
+#   4. Clone dotfiles repo
+#   5. Hand off to Ansible
 #
 # Everything else (packages, settings, services) is Ansible's job.
 # Idempotent — safe to run multiple times.
@@ -40,33 +39,14 @@ else
 fi
 echo "📋 Platform: $OS"
 
-# ── Step 1: Xcode CLT (macOS only — gives us git, clang, make) ──
-if [[ "$OS" == "macos" ]] && ! xcode-select -p &>/dev/null; then
-    echo "📦 Installing Xcode Command Line Tools..."
-    touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-    PROD=$(softwareupdate -l 2>/dev/null | \
-        grep "\*.*Command Line" | \
-        head -n 1 | awk -F"*" '{print $2}' | \
-        sed -e 's/^ *//' | tr -d '\n')
-    if [[ -n "$PROD" ]]; then
-        softwareupdate -i "$PROD" --verbose
-    else
-        echo "⚠️  softwareupdate couldn't find CLT, falling back to xcode-select..."
-        xcode-select --install
-        until xcode-select -p &>/dev/null; do sleep 5; done
-    fi
-    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
-    echo "✅ Xcode CLT installed"
-fi
-
-# ── Step 2: Homebrew (macOS only — gives us pipx) ──
+# ── Step 1: Homebrew (macOS only — installs Xcode CLT automatically) ──
 if [[ "$OS" == "macos" ]] && ! command -v brew &>/dev/null; then
     echo "📦 Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 [[ "$OS" == "macos" ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# ── Step 3: pipx + Ansible ──
+# ── Step 2: pipx + Ansible ──
 export PATH="$HOME/.local/bin:$PATH"
 if ! command -v ansible-playbook &>/dev/null; then
     echo "📦 Installing Ansible..."
@@ -81,7 +61,7 @@ if ! command -v ansible-playbook &>/dev/null; then
     fi
 fi
 
-# ── Step 4: Clone or update dotfiles ──
+# ── Step 3: Clone or update dotfiles ──
 if [[ ! -d "$DOTFILES_DIR" ]]; then
     echo "📦 Cloning dotfiles..."
     mkdir -p "$(dirname "$DOTFILES_DIR")"
@@ -91,10 +71,10 @@ else
     git -C "$DOTFILES_DIR" pull --ff-only 2>/dev/null || true
 fi
 
-# ── Step 5: Ansible Galaxy collections ──
+# ── Step 4: Ansible Galaxy collections ──
 ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" --force-with-deps 2>/dev/null
 
-# ── Step 6: Hand off to Ansible ──
+# ── Step 5: Hand off to Ansible ──
 echo "🔧 Running Ansible..."
 ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \
 ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
