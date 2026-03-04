@@ -90,3 +90,8 @@ ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
 
 echo ""
 echo "✅ Setup complete!"
+echo ""
+echo "💡 Quick commands:"
+echo "   cd $DOTFILES_DIR && ./run.sh                 # run all"
+echo "   cd $DOTFILES_DIR && ./run.sh --tags dock      # run specific role"
+echo "   cd $DOTFILES_DIR && ./run.sh --check --diff   # dry run"
