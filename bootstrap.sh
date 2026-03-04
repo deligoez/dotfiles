@@ -85,7 +85,8 @@ ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" 2>
 if [[ "$OS" == "macos" ]]; then
     DESIRED_HOSTNAME=$(grep '^hostname:' "$DOTFILES_DIR/config.yml" | awk '{print $2}')
     CURRENT_HOSTNAME=$(scutil --get ComputerName 2>/dev/null || echo "")
-    if [[ -n "$DESIRED_HOSTNAME" && "$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" ]]; then
+    CURRENT_NETBIOS=$(defaults read /Library/Preferences/SystemConfiguration/com.apple.smb.server NetBIOSName 2>/dev/null || echo "")
+    if [[ -n "$DESIRED_HOSTNAME" && ("$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" || "$CURRENT_NETBIOS" != "$DESIRED_HOSTNAME") ]]; then
         echo "📛 Setting hostname to $DESIRED_HOSTNAME..."
         sudo scutil --set ComputerName "$DESIRED_HOSTNAME"
         sudo scutil --set HostName "$DESIRED_HOSTNAME"
