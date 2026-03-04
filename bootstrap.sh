@@ -92,8 +92,8 @@ ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
 ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && ./run.sh'"
 if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
     echo "$ALIAS_LINE" >> ~/.zshrc
-    echo "💡 Added 'dotfiles' alias — run it anytime to sync and apply."
 fi
+source ~/.zshrc
 
 echo ""
 echo "✅ Setup complete!"
