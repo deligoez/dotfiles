@@ -22,6 +22,16 @@
     type: bool
     value: false
 
+# ── Appearance ──
+- name: "Appearance: Auto (light/dark)"
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleInterfaceStyleSwitchesAutomatically
+    type: bool
+    value: true
+
+# Icon & widget style: set manually (no known defaults key in macOS 26)
+
 # ── Accessibility ──
 - name: Enable reduce motion
   community.general.osx_defaults:
