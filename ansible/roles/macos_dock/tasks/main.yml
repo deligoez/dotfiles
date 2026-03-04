@@ -1,0 +1,58 @@
+---
+- name: Close System Preferences to prevent override
+  ansible.builtin.command: osascript -e 'tell application "System Preferences" to quit'
+  changed_when: false
+  failed_when: false
+
+- name: Clear all apps from Dock
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: persistent-apps
+    type: array
+    value: []
+
+- name: Set Dock icon size to 50px
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: tilesize
+    type: float
+    value: 50
+
+- name: Disable opening application animation
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: launchanim
+    type: bool
+    value: false
+
+- name: Auto-hide Dock
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: autohide
+    type: bool
+    value: true
+
+- name: Hide recent applications in Dock
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: show-recents
+    type: bool
+    value: false
+
+- name: Speed up Mission Control animations
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: expose-animation-duration
+    type: float
+    value: 0.1
+
+- name: Disable auto-rearrange Spaces by recent use
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: mru-spaces
+    type: bool
+    value: false
+
+- name: Restart Dock to apply changes
+  ansible.builtin.command: killall Dock
+  changed_when: true

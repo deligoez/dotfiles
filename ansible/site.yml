@@ -1,0 +1,14 @@
+---
+- name: Setup developer workstation
+  hosts: all
+  gather_facts: true
+
+  pre_tasks:
+    - name: Display platform info
+      ansible.builtin.debug:
+        msg: "{{ ansible_facts['os_family'] }} / {{ ansible_facts['distribution'] | default('N/A') }}"
+
+  roles:
+    - role: macos_dock
+      tags: [macos, dock]
+      when: ansible_facts['os_family'] == "Darwin"
