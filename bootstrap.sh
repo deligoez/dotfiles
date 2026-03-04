@@ -90,6 +90,7 @@ if [[ "$OS" == "macos" ]]; then
         sudo scutil --set ComputerName "$DESIRED_HOSTNAME"
         sudo scutil --set HostName "$DESIRED_HOSTNAME"
         sudo scutil --set LocalHostName "$DESIRED_HOSTNAME"
+        sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server NetBIOSName -string "$DESIRED_HOSTNAME"
     fi
 fi
 
