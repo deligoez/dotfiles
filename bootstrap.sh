@@ -4,6 +4,14 @@
 
 set -euo pipefail
 
+# ── If piped (not a TTY), re-run with TTY so sudo/Homebrew work ──
+if [[ ! -t 0 ]]; then
+    TMPFILE=$(mktemp /tmp/bootstrap.XXXXXX.sh)
+    curl -fsSL "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
+    chmod +x "$TMPFILE"
+    exec zsh "$TMPFILE" </dev/tty
+fi
+
 DOTFILES_DIR="$HOME/Developer/github/deligoez/dotfiles"
 DOTFILES_REPO_HTTPS="https://github.com/deligoez/dotfiles.git"
 DOTFILES_REPO_SSH="git@github.com:deligoez/dotfiles.git"
