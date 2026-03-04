@@ -1,0 +1,55 @@
+---
+# ── Widgets ──
+- name: Hide desktop widgets
+  community.general.osx_defaults:
+    domain: com.apple.WindowManager
+    key: StandardHideWidgets
+    type: int
+    value: 1
+
+- name: Hide Stage Manager widgets
+  community.general.osx_defaults:
+    domain: com.apple.WindowManager
+    key: StageManagerHideWidgets
+    type: int
+    value: 1
+
+# ── Click wallpaper behavior ──
+- name: "Click wallpaper to show desktop: Only in Stage Manager"
+  community.general.osx_defaults:
+    domain: com.apple.WindowManager
+    key: EnableStandardClickToShowDesktop
+    type: bool
+    value: false
+
+# ── Tips / "What's New" notifications ──
+- name: Disable Tips notifications (tipsd)
+  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd
+  changed_when: true
+
+- name: Disable Tips post-install utility
+  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.postInstall-utility
+  changed_when: true
+
+- name: Disable Tips content updates
+  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.update-content
+  changed_when: true
+
+- name: Disable Tips welcome followup
+  ansible.builtin.command: launchctl disable gui/{{ ansible_facts['user_uid'] }}/com.apple.tipsd.welcome.followup
+  changed_when: true
+
+# ── Wallpaper: solid turquoise ──
+- name: Check if desktoppr is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/desktoppr
+  register: desktoppr_bin
+
+- name: Install desktoppr
+  ansible.builtin.shell: brew install --cask desktoppr
+  when: not desktoppr_bin.stat.exists
+  changed_when: true
+
+- name: Set wallpaper to turquoise
+  ansible.builtin.command: /usr/local/bin/desktoppr color 40E0D0
+  changed_when: true

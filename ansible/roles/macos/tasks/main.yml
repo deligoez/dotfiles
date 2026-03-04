@@ -1,0 +1,8 @@
+---
+- name: Apply desktop settings
+  ansible.builtin.include_tasks: desktop.yml
+  tags: [desktop]
+
+- name: Apply dock settings
+  ansible.builtin.include_tasks: dock.yml
+  tags: [dock]

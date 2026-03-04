@@ -9,6 +9,6 @@
         msg: "{{ ansible_facts['os_family'] }} / {{ ansible_facts['distribution'] | default('N/A') }}"
 
   roles:
-    - role: macos_dock
-      tags: [macos, dock]
+    - role: macos
+      tags: [macos]
       when: ansible_facts['os_family'] == "Darwin"
