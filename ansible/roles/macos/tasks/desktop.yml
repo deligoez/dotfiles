@@ -22,14 +22,6 @@
     type: bool
     value: false
 
-# ── Accessibility ──
-- name: Reduce motion
-  community.general.osx_defaults:
-    domain: com.apple.universalaccess
-    key: reduceMotion
-    type: bool
-    value: true
-
 # ── Keyboard ──
 - name: Enable full keyboard access
   community.general.osx_defaults:
