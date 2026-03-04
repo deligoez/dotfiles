@@ -2,6 +2,8 @@
 - name: Setup developer workstation
   hosts: all
   gather_facts: true
+  vars_files:
+    - ../config.yml
 
   pre_tasks:
     - name: Display platform info

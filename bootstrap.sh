@@ -81,6 +81,18 @@ fi
 # ── Step 4: Ansible Galaxy collections ──
 ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" 2>/dev/null
 
+# ── Step 4b: Set hostname (needs sudo, Ansible can't prompt) ──
+if [[ "$OS" == "macos" ]]; then
+    DESIRED_HOSTNAME=$(grep '^hostname:' "$DOTFILES_DIR/config.yml" | awk '{print $2}')
+    CURRENT_HOSTNAME=$(scutil --get ComputerName 2>/dev/null || echo "")
+    if [[ -n "$DESIRED_HOSTNAME" && "$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" ]]; then
+        echo "📛 Setting hostname to $DESIRED_HOSTNAME..."
+        sudo scutil --set ComputerName "$DESIRED_HOSTNAME"
+        sudo scutil --set HostName "$DESIRED_HOSTNAME"
+        sudo scutil --set LocalHostName "$DESIRED_HOSTNAME"
+    fi
+fi
+
 # ── Step 5: Hand off to Ansible ──
 echo "🔧 Running Ansible..."
 ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \

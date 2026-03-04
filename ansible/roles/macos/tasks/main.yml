@@ -1,4 +1,8 @@
 ---
+- name: Apply hostname settings
+  ansible.builtin.include_tasks: hostname.yml
+  tags: [hostname]
+
 - name: Apply desktop settings
   ansible.builtin.include_tasks: desktop.yml
   tags: [desktop]
