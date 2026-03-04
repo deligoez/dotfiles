@@ -60,6 +60,14 @@
     type: int
     value: 1
 
+# ── Siri ──
+- name: Disable Siri
+  community.general.osx_defaults:
+    domain: com.apple.assistant.support
+    key: "Assistant Enabled"
+    type: bool
+    value: false
+
 # ── Wallpaper ──
 - name: Set wallpaper to Space Gray Pro
   ansible.builtin.command: >
