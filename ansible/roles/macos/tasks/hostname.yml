@@ -1,8 +1,0 @@
----
-# ComputerName, HostName, LocalHostName are set by bootstrap.sh (needs sudo)
-- name: Set NetBIOSName
-  community.general.osx_defaults:
-    domain: /Library/Preferences/SystemConfiguration/com.apple.smb.server
-    key: NetBIOSName
-    type: string
-    value: "{{ hostname }}"

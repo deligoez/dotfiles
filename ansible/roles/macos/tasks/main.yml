@@ -1,7 +1,5 @@
 ---
-- name: Apply hostname settings
-  ansible.builtin.include_tasks: hostname.yml
-  tags: [hostname]
+# Hostname is set by bootstrap.sh (needs sudo)
 
 - name: Apply desktop settings
   ansible.builtin.include_tasks: desktop.yml
