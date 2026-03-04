@@ -51,3 +51,14 @@
     key: AppleTemperatureUnit
     type: string
     value: Celsius
+
+# ── Keyboard input sources ──
+- name: Set keyboard input sources
+  ansible.builtin.shell: |
+    defaults write com.apple.HIToolbox AppleEnabledInputSources -array \
+    {% for layout in keyboard_layouts %}
+      '{ InputSourceKind = "Keyboard Layout"; "KeyboardLayout ID" = {{ layout.id }}; "KeyboardLayout Name" = "{{ layout.name }}"; }' \
+    {% endfor %}
+      '{ "Bundle ID" = "com.apple.CharacterPaletteIM"; InputSourceKind = "Non Keyboard Input Method"; }' \
+      '{ "Bundle ID" = "com.apple.PressAndHold"; InputSourceKind = "Non Keyboard Input Method"; }'
+  changed_when: false

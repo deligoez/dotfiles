@@ -6,3 +6,10 @@ languages:
   - en-TR
   - tr-TR
   - de-DE
+keyboard_layouts:
+  - name: ABC
+    id: 252
+  - name: Turkish-QWERTY-PC
+    id: -36
+  - name: German
+    id: 3
