@@ -25,10 +25,22 @@ echo "📋 Platform: $OS"
 # ── Xcode CLT (macOS) ──
 if [[ "$OS" == "macos" ]]; then
     if ! xcode-select -p &>/dev/null; then
-        echo "📦 Installing Xcode Command Line Tools..."
-        xcode-select --install
-        echo "⏳ Complete the Xcode CLT install dialog, then press Enter..."
-        read -r
+        echo "📦 Installing Xcode Command Line Tools (no dialog)..."
+        # Trigger softwareupdate to list CLT as available
+        touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+        PROD=$(softwareupdate -l 2>/dev/null | \
+            grep "\*.*Command Line" | \
+            head -n 1 | awk -F"*" '{print $2}' | \
+            sed -e 's/^ *//' | tr -d '\n')
+        if [[ -n "$PROD" ]]; then
+            softwareupdate -i "$PROD" --verbose
+        else
+            echo "⚠️  Could not find CLT in softwareupdate, falling back to xcode-select..."
+            xcode-select --install
+            until xcode-select -p &>/dev/null; do sleep 5; done
+        fi
+        rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+        echo "✅ Xcode CLT installed"
     fi
 fi
 
