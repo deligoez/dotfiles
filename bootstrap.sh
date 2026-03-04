@@ -18,7 +18,8 @@ set -euo pipefail
 # sudo and Homebrew need a real terminal for interactive prompts
 if [[ ! -t 0 ]]; then
     TMPFILE="/tmp/dotfiles-bootstrap-$$.sh"
-    curl -fsSL "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
+    curl -fsSL -H "Cache-Control: no-cache" \
+        "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
     chmod +x "$TMPFILE"
     exec zsh "$TMPFILE" </dev/tty
 fi
