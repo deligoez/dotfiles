@@ -22,13 +22,21 @@
     type: bool
     value: false
 
+# ── Accessibility ──
+- name: Enable reduce motion
+  community.general.osx_defaults:
+    domain: com.apple.Accessibility
+    key: ReduceMotionEnabled
+    type: int
+    value: 1
+
 # ── Keyboard ──
 - name: Enable full keyboard access
   community.general.osx_defaults:
-    domain: NSGlobalDomain
-    key: AppleKeyboardUIMode
+    domain: com.apple.Accessibility
+    key: FullKeyboardAccessEnabled
     type: int
-    value: 2
+    value: 1
 
 # ── Wallpaper ──
 - name: Set wallpaper to Space Gray Pro
