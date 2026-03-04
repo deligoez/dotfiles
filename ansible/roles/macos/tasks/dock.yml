@@ -4,16 +4,14 @@
   changed_when: false
   failed_when: false
 
-- name: Clear all apps from Dock
-  community.general.osx_defaults:
-    domain: com.apple.dock
-    key: persistent-apps
-    type: array
-    value: []
+- name: Check current Dock apps
+  ansible.builtin.shell: defaults read com.apple.dock persistent-apps | grep '_CFURLString' | sed 's/.*"\(.*\)".*/\1/'
+  register: dock_apps
+  changed_when: false
 
-- name: Add Messages to Dock
+- name: Set Dock apps to Messages only
   ansible.builtin.shell: |
-    defaults write com.apple.dock persistent-apps -array-add \
+    defaults write com.apple.dock persistent-apps -array \
       '<dict>
         <key>tile-data</key>
         <dict>
@@ -26,7 +24,8 @@
           </dict>
         </dict>
       </dict>'
-  changed_when: true
+  when: dock_apps.stdout_lines | map('trim') | list != ['/System/Applications/Messages.app']
+  notify: Restart Dock
 
 - name: Set Dock icon size to 50px
   community.general.osx_defaults:
@@ -34,6 +33,7 @@
     key: tilesize
     type: float
     value: 50
+  notify: Restart Dock
 
 - name: Disable opening application animation
   community.general.osx_defaults:
@@ -41,6 +41,7 @@
     key: launchanim
     type: bool
     value: false
+  notify: Restart Dock
 
 - name: Auto-hide Dock
   community.general.osx_defaults:
@@ -48,6 +49,7 @@
     key: autohide
     type: bool
     value: true
+  notify: Restart Dock
 
 - name: Hide recent applications in Dock
   community.general.osx_defaults:
@@ -55,6 +57,7 @@
     key: show-recents
     type: bool
     value: false
+  notify: Restart Dock
 
 - name: Speed up Mission Control animations
   community.general.osx_defaults:
@@ -62,6 +65,7 @@
     key: expose-animation-duration
     type: float
     value: 0.1
+  notify: Restart Dock
 
 - name: Disable auto-rearrange Spaces by recent use
   community.general.osx_defaults:
@@ -69,7 +73,4 @@
     key: mru-spaces
     type: bool
     value: false
-
-- name: Restart Dock to apply changes
-  ansible.builtin.command: killall Dock
-  changed_when: true
+  notify: Restart Dock
