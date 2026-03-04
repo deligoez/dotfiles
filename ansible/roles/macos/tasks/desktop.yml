@@ -31,12 +31,19 @@
     value: 1
 
 # ── Keyboard ──
-- name: Enable full keyboard access
+- name: Enable full keyboard access (NSGlobalDomain)
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: AppleKeyboardUIMode
+    type: int
+    value: 2
+
+- name: Enable full keyboard access (Accessibility)
   community.general.osx_defaults:
     domain: com.apple.Accessibility
     key: FullKeyboardAccessEnabled
-    type: int
-    value: 1
+    type: bool
+    value: true
 
 # ── Wallpaper ──
 - name: Set wallpaper to Space Gray Pro
