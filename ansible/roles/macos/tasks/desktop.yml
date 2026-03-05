@@ -60,35 +60,9 @@
     type: int
     value: 1
 
-- name: Enable full keyboard access (universalaccess)
-  community.general.osx_defaults:
-    domain: com.apple.universalaccess
-    key: keyboardAccessEnabled
-    type: int
-    value: 1
-  ignore_errors: true
-
-- name: Set keyboard access passthrough mode
-  community.general.osx_defaults:
-    domain: com.apple.universalaccess
-    key: keyboardAccessPassthroughMode
-    type: int
-    value: 0
-  ignore_errors: true
-
-- name: Enable accessibility
-  community.general.osx_defaults:
-    domain: com.apple.Accessibility
-    key: AccessibilityEnabled
-    type: int
-    value: 1
-
-- name: Enable application accessibility
-  community.general.osx_defaults:
-    domain: com.apple.Accessibility
-    key: ApplicationAccessibilityEnabled
-    type: int
-    value: 1
+  # NOTE: Full keyboard access cannot be reliably set via defaults on macOS 26.
+  # The keys above (AppleKeyboardUIMode + FullKeyboardAccessEnabled) are written
+  # but the UI requires manual activation in System Settings → Accessibility → Keyboard.
 
 # ── Window animations ──
 - name: Disable window opening/closing animations
