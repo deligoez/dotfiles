@@ -66,6 +66,7 @@
     key: keyboardAccessEnabled
     type: int
     value: 1
+  ignore_errors: true
 
 - name: Set keyboard access passthrough mode
   community.general.osx_defaults:
@@ -73,6 +74,7 @@
     key: keyboardAccessPassthroughMode
     type: int
     value: 0
+  ignore_errors: true
 
 - name: Enable accessibility
   community.general.osx_defaults:
