@@ -60,6 +60,34 @@
     type: int
     value: 1
 
+- name: Enable full keyboard access (universalaccess)
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: keyboardAccessEnabled
+    type: int
+    value: 1
+
+- name: Set keyboard access passthrough mode
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: keyboardAccessPassthroughMode
+    type: int
+    value: 0
+
+- name: Enable accessibility
+  community.general.osx_defaults:
+    domain: com.apple.Accessibility
+    key: AccessibilityEnabled
+    type: int
+    value: 1
+
+- name: Enable application accessibility
+  community.general.osx_defaults:
+    domain: com.apple.Accessibility
+    key: ApplicationAccessibilityEnabled
+    type: int
+    value: 1
+
 # ── Window animations ──
 - name: Disable window opening/closing animations
   community.general.osx_defaults:
