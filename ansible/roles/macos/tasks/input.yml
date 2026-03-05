@@ -40,8 +40,8 @@
   community.general.osx_defaults:
     domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
     key: Clicking
-    type: bool
-    value: true
+    type: int
+    value: 1
 
 - name: Enable tap to click (current host)
   community.general.osx_defaults:
