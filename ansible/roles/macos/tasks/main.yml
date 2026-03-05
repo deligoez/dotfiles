@@ -13,6 +13,18 @@
   ansible.builtin.include_tasks: menubar.yml
   tags: [menubar]
 
+- name: Apply input settings
+  ansible.builtin.include_tasks: input.yml
+  tags: [input]
+
+- name: Apply finder settings
+  ansible.builtin.include_tasks: finder.yml
+  tags: [finder]
+
 - name: Apply dock settings
   ansible.builtin.include_tasks: dock.yml
   tags: [dock]
+
+- name: Apply app settings
+  ansible.builtin.include_tasks: apps.yml
+  tags: [apps]

@@ -51,7 +51,7 @@
     domain: NSGlobalDomain
     key: AppleKeyboardUIMode
     type: int
-    value: 2
+    value: 3
 
 - name: Enable full keyboard access (Accessibility)
   community.general.osx_defaults:
@@ -59,6 +59,21 @@
     key: FullKeyboardAccessEnabled
     type: int
     value: 1
+
+# ── Window animations ──
+- name: Disable window opening/closing animations
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSAutomaticWindowAnimationsEnabled
+    type: bool
+    value: false
+
+- name: Speed up window resize animations
+  community.general.osx_defaults:
+    domain: NSGlobalDomain
+    key: NSWindowResizeTime
+    type: float
+    value: 0.001
 
 # ── Siri ──
 - name: Disable Siri
