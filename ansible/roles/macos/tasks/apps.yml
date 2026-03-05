@@ -1,0 +1,22 @@
+---
+# ── TextEdit ──
+- name: "TextEdit: Use plain text mode by default"
+  community.general.osx_defaults:
+    domain: com.apple.TextEdit
+    key: RichText
+    type: int
+    value: 0
+
+- name: "TextEdit: Set plain text encoding to UTF-8"
+  community.general.osx_defaults:
+    domain: com.apple.TextEdit
+    key: PlainTextEncoding
+    type: int
+    value: 4
+
+- name: "TextEdit: Set plain text write encoding to UTF-8"
+  community.general.osx_defaults:
+    domain: com.apple.TextEdit
+    key: PlainTextEncodingForWrite
+    type: int
+    value: 4

@@ -82,6 +82,8 @@ fi
 ansible-galaxy collection install -r "$DOTFILES_DIR/ansible/requirements.yml" 2>/dev/null
 
 # ── Step 4b: Set hostname (needs sudo, Ansible can't prompt) ──
+# Refresh sudo ticket — Homebrew/pipx steps may have invalidated it
+sudo -v
 if [[ "$OS" == "macos" ]]; then
     DESIRED_HOSTNAME=$(grep '^hostname:' "$DOTFILES_DIR/config.yml" | awk '{print $2}')
     CURRENT_HOSTNAME=$(scutil --get ComputerName 2>/dev/null || echo "")
@@ -111,7 +113,7 @@ ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     --limit "$OS"
 
 # ── Step 6: Add 'dotfiles' alias to zsh ──
-ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos'"
+ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && PATH=\$HOME/.local/bin:/opt/homebrew/bin:\$PATH ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos'"
 if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
     echo "$ALIAS_LINE" >> ~/.zshrc
 fi

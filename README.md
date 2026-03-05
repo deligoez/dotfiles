@@ -42,7 +42,10 @@ ansible/
             ├── locale.yml    Languages, region, 24h time, metric
             ├── desktop.yml   Appearance, widgets, wallpaper, Siri, accessibility
             ├── menubar.yml   Bluetooth, WiFi, Clock visibility
-            └── dock.yml      Apps, icon size, auto-hide, animations
+            ├── input.yml     Autocorrect, key repeat, press-and-hold
+            ├── finder.yml    View, search, save dialogs, .DS_Store
+            ├── dock.yml      Apps, icon size, auto-hide, animations
+            └── apps.yml      TextEdit plain text mode
 archive/                  Legacy setup scripts (reference only)
 ```
 
