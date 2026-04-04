@@ -49,3 +49,11 @@
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
   when: gh_key_check.rc != 0
   ignore_errors: true
+
+- name: Setup gh as git credential helper
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/gh auth setup-git
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  changed_when: false
+  failed_when: false
