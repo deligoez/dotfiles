@@ -14,7 +14,7 @@ HJKL-first, vim-style, layered keybinding system with a modern macOS developer s
 
 | Category | Old | New |
 |----------|-----|-----|
-| Shell | Fish | Nushell |
+| Shell | Fish | Fish (staying) |
 | Terminal | iTerm2 | Ghostty |
 | Prompt | ? | Starship |
 | Multiplexer | tmux | Zellij |
@@ -62,7 +62,7 @@ docs/                 # Setup guide, screenshots, recordings (gitignored)
 - [ ] SSH keys
 
 ### Phase 2: Shell & Terminal
-- [ ] Nushell
+- [ ] Fish (config migration from archive)
 - [ ] Ghostty
 - [ ] Starship
 
