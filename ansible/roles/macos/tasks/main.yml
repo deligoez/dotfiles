@@ -1,6 +1,26 @@
 ---
 # Hostname and timezone are set by bootstrap.sh (needs sudo)
 
+# ── Manual prerequisites ──
+
+- name: Check App Management permission for Terminal
+  ansible.builtin.shell: >
+    sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db"
+    "SELECT allowed FROM access WHERE service='kTCCServiceAppManagement'
+    AND client='com.apple.Terminal';" 2>/dev/null
+  register: app_mgmt_check
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Prompt for App Management permission
+  ansible.builtin.pause:
+    prompt: >-
+      ⚠️  Terminal.app needs App Management permission.
+      Please go to System Settings > Privacy & Security > App Management
+      and enable Terminal.app, then press Enter to continue
+  when: app_mgmt_check.stdout != "1"
+
 # ── macOS settings first (fast, no dependencies) ──
 
 - name: Apply locale settings

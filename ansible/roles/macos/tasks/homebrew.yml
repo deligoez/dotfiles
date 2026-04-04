@@ -325,16 +325,35 @@
   ignore_errors: true
   loop: "{{ missing_casks | difference(sudo_casks) }}"
 
+- name: Refresh sudo ticket for casks needing pkg install
+  ansible.builtin.command: /usr/bin/true
+  become: true
+  changed_when: false
+  when: missing_casks | intersect(sudo_casks) | length > 0
+
 - name: Install missing Homebrew casks (sudo required)
   community.general.homebrew_cask:
     name: "{{ item }}"
     state: present
-    sudo_password: "{{ ansible_become_password | default('') }}"
   environment: "{{ homebrew_env }}"
   ignore_errors: true
   loop: "{{ missing_casks | intersect(sudo_casks) }}"
 
 # ── Mac App Store ──
+
+- name: Check App Store login
+  ansible.builtin.command: /opt/homebrew/bin/mas account
+  environment: "{{ homebrew_env }}"
+  register: mas_account
+  changed_when: false
+  failed_when: false
+
+- name: Prompt for App Store login
+  ansible.builtin.pause:
+    prompt: >-
+      ⚠️  Not signed in to the App Store.
+      Please open App Store, sign in with your Apple Account, then press Enter to continue
+  when: mas_account.rc != 0
 
 - name: Install Mac App Store apps
   community.general.mas:
