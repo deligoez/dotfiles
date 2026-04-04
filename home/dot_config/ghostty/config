@@ -20,7 +20,6 @@ window-padding-y = 10
 
 macos-titlebar-style = hidden
 macos-option-as-alt = true
-command = /opt/homebrew/bin/fish
 
 auto-update-channel = tip
 shell-integration = none
