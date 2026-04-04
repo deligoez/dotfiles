@@ -74,3 +74,9 @@
 - name: Apply dotfile configs
   ansible.builtin.include_tasks: chezmoi.yml
   tags: [chezmoi]
+
+# ── SSH keys (after chezmoi deploys ~/.ssh/config) ──
+
+- name: Setup SSH keys
+  ansible.builtin.include_tasks: ssh.yml
+  tags: [ssh]

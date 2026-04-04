@@ -1,5 +1,6 @@
 ---
 hostname: deligoez-mac
+git_email: ye@deligoz.me
 timezone: Europe/Istanbul
 region: TR
 languages:

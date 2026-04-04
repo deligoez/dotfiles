@@ -1,0 +1,43 @@
+---
+- name: Check if SSH key exists
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.ssh/id_ed25519"
+  register: ssh_key
+
+- name: Generate SSH key
+  ansible.builtin.command:
+    cmd: ssh-keygen -t ed25519 -C "{{ git_email }}" -f {{ ansible_facts.env.HOME }}/.ssh/id_ed25519 -N ""
+  when: not ssh_key.stat.exists
+
+- name: Ensure ssh-agent is running
+  ansible.builtin.shell: eval "$(ssh-agent -s)"
+  changed_when: false
+
+- name: Add SSH key to macOS Keychain
+  ansible.builtin.command:
+    cmd: ssh-add --apple-use-keychain {{ ansible_facts.env.HOME }}/.ssh/id_ed25519
+  changed_when: false
+  failed_when: false
+
+- name: Check if key is on GitHub
+  ansible.builtin.shell: /opt/homebrew/bin/gh ssh-key list 2>/dev/null | grep -q "$(cat {{ ansible_facts.env.HOME }}/.ssh/id_ed25519.pub | awk '{print $2}')"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: gh_key_check
+  changed_when: false
+  failed_when: false
+
+- name: Prompt for GitHub login
+  ansible.builtin.pause:
+    prompt: >-
+      ⚠️  Not logged in to GitHub CLI.
+      Please run 'gh auth login' in another terminal, then press Enter to continue
+  when: gh_key_check.rc == 4
+
+- name: Add SSH key to GitHub
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/gh ssh-key add {{ ansible_facts.env.HOME }}/.ssh/id_ed25519.pub --title "{{ ansible_facts.hostname }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  when: gh_key_check.rc != 0
+  ignore_errors: true
