@@ -36,3 +36,15 @@
 - name: Install Homebrew packages
   ansible.builtin.include_tasks: homebrew.yml
   tags: [homebrew]
+
+# ── Shell setup (after fish is installed) ──
+
+- name: Set default shell
+  ansible.builtin.include_tasks: shell.yml
+  tags: [shell]
+
+# ── Config files via chezmoi (after packages are installed) ──
+
+- name: Apply dotfile configs
+  ansible.builtin.include_tasks: chezmoi.yml
+  tags: [chezmoi]
