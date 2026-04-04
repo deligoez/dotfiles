@@ -329,17 +329,29 @@
 
 # ── Mac App Store ──
 
-- name: Install Mac App Store apps
-  community.general.mas:
-    id:
-      - 507659816   # Network Radar
-      - 409203825   # Numbers
-      - 409201541   # Pages
-      - 1524335878  # Under My Roof
-      - 1295203466  # Windows App
-      - 1451685025  # WireGuard
-    state: present
+- name: Define desired Mac App Store apps
+  ansible.builtin.set_fact:
+    mas_apps:
+      - { id: 507659816,  name: "Network Radar" }
+      - { id: 409203825,  name: "Numbers" }
+      - { id: 409201541,  name: "Pages" }
+      - { id: 1524335878, name: "Under My Roof" }
+      - { id: 1295203466, name: "Windows App" }
+      - { id: 1451685025, name: "WireGuard" }
+
+- name: Get installed Mac App Store apps
+  ansible.builtin.command: /opt/homebrew/bin/mas list
   environment: "{{ homebrew_env }}"
+  register: mas_installed
+  changed_when: false
+
+- name: Install missing Mac App Store apps
+  ansible.builtin.command: /opt/homebrew/bin/mas install {{ item.id }}
+  environment: "{{ homebrew_env }}"
+  loop: "{{ mas_apps }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: "item.id | string not in mas_installed.stdout"
   ignore_errors: true
 
 # ── Manual install reminders ──
