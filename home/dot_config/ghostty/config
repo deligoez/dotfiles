@@ -1,0 +1,26 @@
+font-family = Iosevka Term Medium
+font-family-bold = Iosevka Term Semibold
+font-family = Apple Color Emoji
+font-size = 19
+
+# Force emoji to use Apple Color Emoji
+font-codepoint-map = U+1F600-U+1F64F=Apple Color Emoji
+font-codepoint-map = U+1F300-U+1F5FF=Apple Color Emoji
+font-codepoint-map = U+1F680-U+1F6FF=Apple Color Emoji
+font-codepoint-map = U+1F900-U+1F9FF=Apple Color Emoji
+font-codepoint-map = U+2600-U+26FF=Apple Color Emoji
+font-codepoint-map = U+2700-U+27BF=Apple Color Emoji
+
+adjust-cell-height = 10%
+
+theme = light:Deligoez Light,dark:Deligoez Dark
+
+window-padding-x = 10
+window-padding-y = 10
+
+macos-titlebar-style = hidden
+macos-option-as-alt = true
+command = /opt/homebrew/bin/fish
+
+auto-update-channel = tip
+shell-integration = none

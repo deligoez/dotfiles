@@ -1,0 +1,29 @@
+# Deligoez Dark — Ghostty theme
+# https://github.com/deligoez/deligoez-theme
+
+background = #1a1a1f
+foreground = #d4d4d8
+cursor-color = #ffa1cd
+cursor-text = #1a1a1f
+selection-background = #3a4a6a
+selection-foreground = #d4d4d8
+
+# Normal colors (0-7)
+palette = 0=#1a1a1f
+palette = 1=#ffa396
+palette = 2=#8ebe89
+palette = 3=#d6a862
+palette = 4=#83a4ef
+palette = 5=#ffa1cd
+palette = 6=#75c2d9
+palette = 7=#cccccc
+
+# Bright colors (8-15)
+palette = 8=#666666
+palette = 9=#ff8e7a
+palette = 10=#9ade8f
+palette = 11=#d3d566
+palette = 12=#a1caf3
+palette = 13=#f89ec2
+palette = 14=#9bcdd4
+palette = 15=#e8e8e8
