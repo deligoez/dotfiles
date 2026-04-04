@@ -6,7 +6,11 @@
   failed_when: false
 
 - name: Add Fish to /etc/shells
-  ansible.builtin.shell: echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: /opt/homebrew/bin/fish
+    state: present
+  become: true
   when: fish_in_shells.rc != 0
 
 - name: Get current default shell
