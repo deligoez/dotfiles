@@ -348,6 +348,7 @@
 - name: Install missing Mac App Store apps
   ansible.builtin.command: /opt/homebrew/bin/mas install {{ item.id }}
   environment: "{{ homebrew_env }}"
+  become: true
   loop: "{{ mas_apps }}"
   loop_control:
     label: "{{ item.name }}"
