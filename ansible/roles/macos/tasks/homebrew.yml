@@ -183,8 +183,6 @@
       - superkey
       # Utilities
       - balenaetcher
-      # Virtualization
-      - parallels@20
       # Design & 3D
       - affinity
       - creality-print

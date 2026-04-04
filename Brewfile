@@ -167,7 +167,7 @@ cask "superkey"                                     # Keyboard shortcut overlay
 cask "balenaetcher"                                 # USB/SD image flasher
 
 # ── Virtualization ──
-cask "parallels@20"                                 # macOS/Windows VM
+# parallels@20 — moved to manual install (requires sudo for .pkg)
 
 # ── Design & 3D ──
 cask "affinity"                                     # Photo/design suite
