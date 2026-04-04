@@ -1,6 +1,10 @@
 ---
 # Hostname and timezone are set by bootstrap.sh (needs sudo)
 
+- name: Install Homebrew packages
+  ansible.builtin.include_tasks: homebrew.yml
+  tags: [homebrew]
+
 - name: Apply locale settings
   ansible.builtin.include_tasks: locale.yml
   tags: [locale]

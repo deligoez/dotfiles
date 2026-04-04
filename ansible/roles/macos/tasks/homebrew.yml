@@ -1,0 +1,5 @@
+---
+- name: Install packages from Brewfile
+  ansible.builtin.command: brew bundle --file={{ playbook_dir }}/../Brewfile --no-lock
+  register: brew_bundle
+  changed_when: "'Installing' in brew_bundle.stdout"
