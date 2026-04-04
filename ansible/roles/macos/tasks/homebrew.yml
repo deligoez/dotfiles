@@ -1,5 +1,8 @@
 ---
 - name: Install packages from Brewfile
-  ansible.builtin.command: brew bundle --file={{ playbook_dir }}/../Brewfile --no-lock
+  ansible.builtin.shell: /opt/homebrew/bin/brew bundle --file={{ playbook_dir }}/../Brewfile --verbose 2>&1 | while IFS= read -r line; do echo "$line"; done
   register: brew_bundle
   changed_when: "'Installing' in brew_bundle.stdout"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+    HOMEBREW_NO_AUTO_UPDATE: "1"
