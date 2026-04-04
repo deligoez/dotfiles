@@ -310,12 +310,15 @@
 
 # ── Casks ──
 
-- name: Define casks requiring sudo (pkg installers)
+- name: Define casks requiring special handling
   ansible.builtin.set_fact:
     sudo_casks:
       - openvpn-connect
       - adguard
       - parallels@20
+    # Casks with post-install steps that fail in automation (network, GUI)
+    manual_casks:
+      - autodesk-fusion
 
 - name: Install missing Homebrew casks
   community.general.homebrew_cask:
@@ -323,7 +326,7 @@
     state: present
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop: "{{ missing_casks | difference(sudo_casks) }}"
+  loop: "{{ missing_casks | difference(sudo_casks) | difference(manual_casks) }}"
 
 - name: Refresh sudo ticket for casks needing pkg install
   ansible.builtin.command: /usr/bin/true
@@ -368,3 +371,10 @@
     state: present
   environment: "{{ homebrew_env }}"
   ignore_errors: true
+
+# ── Manual install reminders ──
+
+- name: Remind about casks needing manual install
+  ansible.builtin.debug:
+    msg: "⚠️  These casks need manual install via 'brew install --cask {{ item }}': {{ item }}"
+  loop: "{{ missing_casks | intersect(manual_casks) }}"
