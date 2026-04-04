@@ -1,0 +1,28 @@
+#!/bin/bash
+# Deploy PHP memory limits config for PHP {{ .phpVersion }}
+# Chezmoi re-runs this script whenever the template content changes
+
+set -euo pipefail
+
+PHP_CONF_DIR="/opt/homebrew/etc/php/{{ .phpVersion }}/conf.d"
+TARGET="$PHP_CONF_DIR/php-memory-limits.ini"
+
+if [ ! -d "$PHP_CONF_DIR" ]; then
+  echo "⚠️  PHP {{ .phpVersion }} conf.d not found at $PHP_CONF_DIR, skipping"
+  exit 0
+fi
+
+cat > "$TARGET" << 'EOF'
+; Max memory per instance
+memory_limit = 2048M
+
+;The maximum size of an uploaded file.
+upload_max_filesize = 2048M
+
+; Sets max size of post data allowed.
+; Changes to this will also need to be reflected in Nginx with client_max_body_size
+; This setting also affects file upload. To upload large files, this value must be larger than upload_max_filesize
+post_max_size = 2048M
+EOF
+
+echo "✅ PHP memory limits set in $TARGET"

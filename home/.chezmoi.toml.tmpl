@@ -1,0 +1,4 @@
+{{- $phpVersion := output "/opt/homebrew/bin/php" "-r" "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" | trim -}}
+
+[data]
+  phpVersion = {{ $phpVersion | quote }}
