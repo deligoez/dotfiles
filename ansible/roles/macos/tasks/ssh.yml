@@ -19,6 +19,8 @@
   changed_when: false
   failed_when: false
 
+# ── GitHub CLI integration ──
+
 - name: Check GitHub CLI auth status
   ansible.builtin.command: /opt/homebrew/bin/gh auth status
   environment:
@@ -30,9 +32,23 @@
 - name: Prompt for GitHub login
   ansible.builtin.pause:
     prompt: >-
-      ⚠️  Not logged in to GitHub CLI.
-      Please run 'gh auth login' in another terminal, then press Enter to continue
+      ⚠️  GitHub CLI is not authenticated.
+      In another terminal run: gh auth login
+      Then press Enter here to continue
   when: gh_auth.rc != 0
+
+- name: Re-check GitHub CLI auth status
+  ansible.builtin.command: /opt/homebrew/bin/gh auth status
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: gh_auth_recheck
+  changed_when: false
+  failed_when: false
+  when: gh_auth.rc != 0
+
+- name: Set gh_authenticated flag
+  ansible.builtin.set_fact:
+    gh_authenticated: "{{ (gh_auth.rc == 0) or (gh_auth_recheck.rc | default(1) == 0) }}"
 
 - name: Check if key is on GitHub
   ansible.builtin.shell: /opt/homebrew/bin/gh ssh-key list 2>/dev/null | grep -q "$(cat {{ ansible_facts.env.HOME }}/.ssh/id_ed25519.pub | awk '{print $2}')"
@@ -41,13 +57,14 @@
   register: gh_key_check
   changed_when: false
   failed_when: false
+  when: gh_authenticated
 
 - name: Add SSH key to GitHub
   ansible.builtin.command:
     cmd: /opt/homebrew/bin/gh ssh-key add {{ ansible_facts.env.HOME }}/.ssh/id_ed25519.pub --title "{{ ansible_facts.hostname }}"
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
-  when: gh_key_check.rc != 0
+  when: gh_authenticated and (gh_key_check.rc | default(1)) != 0
   ignore_errors: true
 
 - name: Setup gh as git credential helper
@@ -56,4 +73,9 @@
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
   changed_when: false
-  failed_when: false
+  when: gh_authenticated
+
+- name: Warn if GitHub CLI not authenticated
+  ansible.builtin.debug:
+    msg: "⚠️  GitHub CLI not authenticated — SSH key not uploaded and git credential helper not configured. Run 'gh auth login' then 'dotfiles' to complete."
+  when: not gh_authenticated
