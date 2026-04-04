@@ -110,10 +110,11 @@ echo "🔧 Running Ansible..."
 ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \
 ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     -i "$DOTFILES_DIR/ansible/inventory.yml" \
-    --limit "$OS"
+    --limit "$OS" \
+    --ask-become-pass
 
 # ── Step 6: Add 'dotfiles' alias to zsh ──
-ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && PATH=\$HOME/.local/bin:/opt/homebrew/bin:\$PATH ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos'"
+ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && PATH=\$HOME/.local/bin:/opt/homebrew/bin:\$PATH ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos --ask-become-pass'"
 if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
     echo "$ALIAS_LINE" >> ~/.zshrc
 fi
