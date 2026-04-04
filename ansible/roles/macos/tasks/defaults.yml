@@ -1,0 +1,28 @@
+---
+# Default applications
+# Note: macOS may show a confirmation dialog for browser change — unavoidable
+
+- name: Set default browser to Chrome
+  ansible.builtin.command: /opt/homebrew/bin/defaultbrowser chrome
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: browser_result
+  changed_when: "'is already' not in browser_result.stdout | default('')"
+  failed_when: false
+
+- name: Set Ghostty as default terminal (shell scripts)
+  ansible.builtin.shell: |
+    /usr/bin/python3 -c "
+    from Foundation import NSWorkspace, NSURL
+    from UniformTypeIdentifiers import UTType
+    ws = NSWorkspace.sharedWorkspace()
+    ghostty = NSURL.URLWithString_('file:///Applications/Ghostty.app')
+    for uti in ['public.unix-executable', 'public.shell-script']:
+        t = UTType.typeWithIdentifier_(uti)
+        if t:
+            ws.setDefaultApplicationAtURL_toOpenContentType_completionHandler_(ghostty, t, None)
+    print('done')
+    "
+  register: terminal_result
+  changed_when: "'done' in terminal_result.stdout"
+  failed_when: false

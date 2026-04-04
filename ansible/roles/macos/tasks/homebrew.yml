@@ -124,6 +124,7 @@
       - opencode
       # Dotfile & Tap Management
       - chezmoi
+      - defaultbrowser
       - mas
       - gromgit/brewtils/taproom
       # Testing & Profiling

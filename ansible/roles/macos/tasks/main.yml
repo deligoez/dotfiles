@@ -57,6 +57,12 @@
   ansible.builtin.include_tasks: homebrew.yml
   tags: [homebrew]
 
+# ── Default apps (after packages are installed) ──
+
+- name: Set default applications
+  ansible.builtin.include_tasks: defaults.yml
+  tags: [defaults]
+
 # ── Shell setup (after fish is installed) ──
 
 - name: Set default shell
