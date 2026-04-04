@@ -7,6 +7,9 @@ set -gx EDITOR /opt/homebrew/bin/nvim
 # Starship prompt
 starship init fish | source
 
+# Zoxide (smart cd)
+zoxide init fish | source
+
 # Homebrew completions
 if test -d (brew --prefix)/share/fish/completions
     set -gx fish_complete_path $fish_complete_path (brew --prefix)/share/fish/completions

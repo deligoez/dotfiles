@@ -13,3 +13,6 @@ fish_add_path ~/go/bin
 
 # Cargo (Rust)
 fish_add_path ~/.cargo/bin
+
+# pipx / uv
+fish_add_path ~/.local/bin
