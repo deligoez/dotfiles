@@ -1,0 +1,83 @@
+# Get editor completions based on the config schema
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Prompt format
+format = """
+$directory\
+$git_branch\
+$git_status\
+$git_state\
+$git_metrics
+$character"""
+
+# AWS module configuration - disabled
+[aws]
+disabled = true
+
+# Character (prompt symbol)
+[character]
+success_symbol = "[🙃️](bold green)"
+error_symbol = "[🙃️](bold red)"
+
+# Directory truncation
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+
+# Disable all language/runtime modules
+[php]
+disabled = true
+
+[nodejs]
+disabled = true
+
+[python]
+disabled = true
+
+[ruby]
+disabled = true
+
+[rust]
+disabled = true
+
+[golang]
+disabled = true
+
+[java]
+disabled = true
+
+[dotnet]
+disabled = true
+
+[package]
+disabled = true
+
+[docker_context]
+disabled = true
+
+# Git status (readable symbols)
+[git_status]
+format = '''(
+$all_status$ahead_behind)'''
+conflicted = '⚔️ conflict '
+ahead = '⇡${count} '
+behind = '⇣${count} '
+diverged = '⇕⇡${ahead_count}⇣${behind_count} '
+untracked = '?${count} '
+stashed = '📦 '
+modified = '✏️${count} '
+staged = '✓${count} '
+renamed = '»${count} '
+deleted = '✘${count} '
+
+# Git state (rebase, merge, conflict etc.)
+[git_state]
+rebase = '🔀 REBASE'
+merge = '🔀 MERGE'
+cherry_pick = '🍒 PICK'
+revert = '↩️ REVERT'
+bisect = '🔍 BISECT'
+
+# Git metrics (added/deleted lines)
+[git_metrics]
+disabled = false
