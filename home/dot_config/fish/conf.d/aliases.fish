@@ -16,10 +16,8 @@ abbr -a gf  git fetch
 abbr -a gfc git findcommit
 abbr -a gfm git findmessage
 
-# Dotfiles / Chezmoi
-set -l _dotfiles ~/Developer/github/deligoez/dotfiles
-alias cma="git -C $_dotfiles pull; chezmoi apply --source=$_dotfiles/home"
-alias cmd="chezmoi diff --source=$_dotfiles/home"
+# Dotfiles — pull latest and apply configs
+alias cma="chezmoi update"
 
 # Laravel / PHP
 alias a="php artisan"

@@ -14,7 +14,7 @@
 
 - name: Apply chezmoi configs
   ansible.builtin.command:
-    cmd: /opt/homebrew/bin/chezmoi apply --source={{ playbook_dir }}/../home --force
+    cmd: /opt/homebrew/bin/chezmoi apply --force
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
   register: chezmoi_apply
