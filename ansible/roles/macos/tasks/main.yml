@@ -1,9 +1,7 @@
 ---
 # Hostname and timezone are set by bootstrap.sh (needs sudo)
 
-- name: Install Homebrew packages
-  ansible.builtin.include_tasks: homebrew.yml
-  tags: [homebrew]
+# ── macOS settings first (fast, no dependencies) ──
 
 - name: Apply locale settings
   ansible.builtin.include_tasks: locale.yml
@@ -32,3 +30,9 @@
 - name: Apply app settings
   ansible.builtin.include_tasks: apps.yml
   tags: [apps]
+
+# ── Homebrew packages last (slow, may have failures) ──
+
+- name: Install Homebrew packages
+  ansible.builtin.include_tasks: homebrew.yml
+  tags: [homebrew]
