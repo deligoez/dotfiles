@@ -1,0 +1,22 @@
+---
+- name: Check if chezmoi is initialized
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.config/chezmoi/chezmoi.toml"
+  register: chezmoi_config
+
+- name: Initialize chezmoi
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/chezmoi init --source={{ playbook_dir }}/../home
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  when: not chezmoi_config.stat.exists
+  ignore_errors: true
+
+- name: Apply chezmoi configs
+  ansible.builtin.command:
+    cmd: /opt/homebrew/bin/chezmoi apply --source={{ playbook_dir }}/../home --force
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: chezmoi_apply
+  changed_when: chezmoi_apply.stderr | default('') | length > 0
+  ignore_errors: true
