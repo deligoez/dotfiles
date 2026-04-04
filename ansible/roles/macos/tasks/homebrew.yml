@@ -5,17 +5,18 @@
 - name: Set Homebrew environment
   ansible.builtin.set_fact:
     homebrew_env:
-      PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+      PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_ENV_HINTS: "1"
 
-# ���─ Taps ──
+# ── Taps ──
 
 - name: Add Homebrew taps
   community.general.homebrew_tap:
     name: "{{ item }}"
     state: present
   environment: "{{ homebrew_env }}"
+  ignore_errors: true
   loop:
     - unhappychoice/tap
     - shivammathur/php
@@ -35,6 +36,7 @@
     name: "{{ item }}"
     state: present
   environment: "{{ homebrew_env }}"
+  ignore_errors: true
   loop:
     # Core CLI Tools
     - bash
@@ -134,18 +136,21 @@
     state: present
   environment: "{{ homebrew_env }}"
   register: mysql_install
+  ignore_errors: true
 
 - name: Link MySQL
   ansible.builtin.shell: /opt/homebrew/bin/brew link mysql@8.0 --force
   environment: "{{ homebrew_env }}"
-  when: mysql_install.changed
+  when: mysql_install is changed
   changed_when: true
+  ignore_errors: true
 
 - name: Restart MySQL service
   ansible.builtin.shell: /opt/homebrew/bin/brew services restart mysql@8.0
   environment: "{{ homebrew_env }}"
-  when: mysql_install.changed
+  when: mysql_install is changed
   changed_when: true
+  ignore_errors: true
 
 - name: Install Redis
   community.general.homebrew:
@@ -153,12 +158,14 @@
     state: present
   environment: "{{ homebrew_env }}"
   register: redis_install
+  ignore_errors: true
 
 - name: Restart Redis service
   ansible.builtin.shell: /opt/homebrew/bin/brew services restart redis
   environment: "{{ homebrew_env }}"
-  when: redis_install.changed
+  when: redis_install is changed
   changed_when: true
+  ignore_errors: true
 
 - name: Install Nginx
   community.general.homebrew:
@@ -166,12 +173,14 @@
     state: present
   environment: "{{ homebrew_env }}"
   register: nginx_install
+  ignore_errors: true
 
 - name: Restart Nginx service
   ansible.builtin.shell: /opt/homebrew/bin/brew services restart nginx
   environment: "{{ homebrew_env }}"
-  when: nginx_install.changed
+  when: nginx_install is changed
   changed_when: true
+  ignore_errors: true
 
 - name: Start PHP service
   ansible.builtin.shell: /opt/homebrew/bin/brew services start php
@@ -186,6 +195,7 @@
     name: "{{ item }}"
     state: present
   environment: "{{ homebrew_env }}"
+  ignore_errors: true
   loop:
     # Editors
     - cursor
@@ -255,3 +265,4 @@
       - 1451685025  # WireGuard
     state: present
   environment: "{{ homebrew_env }}"
+  ignore_errors: true
