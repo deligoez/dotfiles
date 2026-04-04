@@ -309,14 +309,14 @@
 
 # ── Casks ──
 
-- name: Define casks requiring special handling
+- name: Define casks requiring manual install
   ansible.builtin.set_fact:
-    sudo_casks:
+    # These casks need sudo for .pkg install or post-install steps
+    # that cannot be automated (no TTY for sudo in Ansible)
+    manual_casks:
       - openvpn-connect
       - adguard
       - parallels@20
-    # Casks with post-install steps that fail in automation (network, GUI)
-    manual_casks: []
 
 - name: Install missing Homebrew casks
   community.general.homebrew_cask:
@@ -324,21 +324,7 @@
     state: present
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop: "{{ missing_casks | difference(sudo_casks) | difference(manual_casks) }}"
-
-- name: Refresh sudo ticket for casks needing pkg install
-  ansible.builtin.command: /usr/bin/true
-  become: true
-  changed_when: false
-  when: missing_casks | intersect(sudo_casks) | length > 0
-
-- name: Install missing Homebrew casks (sudo required)
-  community.general.homebrew_cask:
-    name: "{{ item }}"
-    state: present
-  environment: "{{ homebrew_env }}"
-  ignore_errors: true
-  loop: "{{ missing_casks | intersect(sudo_casks) }}"
+  loop: "{{ missing_casks | difference(manual_casks) }}"
 
 # ── Mac App Store ──
 
