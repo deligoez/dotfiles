@@ -1,6 +1,7 @@
 ---
-# Homebrew package installation — parsed from Brewfile categories
-# Uses native Ansible modules for per-package feedback instead of brew bundle
+# Homebrew package installation
+# First checks what's already installed, then only installs missing packages
+# This makes re-runs very fast while still showing per-package output on first run
 
 - name: Set Homebrew environment
   ansible.builtin.set_fact:
@@ -9,124 +10,240 @@
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_ENV_HINTS: "1"
 
-# ── Taps ──
+# ── Gather installed state (one-time, fast) ──
 
-- name: Add Homebrew taps
+- name: Get installed taps
+  ansible.builtin.command: /opt/homebrew/bin/brew tap
+  environment: "{{ homebrew_env }}"
+  register: installed_taps_raw
+  changed_when: false
+
+- name: Get installed formulae
+  ansible.builtin.command: /opt/homebrew/bin/brew list --formula -1
+  environment: "{{ homebrew_env }}"
+  register: installed_formulae_raw
+  changed_when: false
+
+- name: Get installed casks
+  ansible.builtin.command: /opt/homebrew/bin/brew list --cask -1
+  environment: "{{ homebrew_env }}"
+  register: installed_casks_raw
+  changed_when: false
+
+- name: Build installed sets
+  ansible.builtin.set_fact:
+    installed_taps: "{{ installed_taps_raw.stdout_lines | default([]) }}"
+    installed_formulae: "{{ installed_formulae_raw.stdout_lines | default([]) }}"
+    installed_casks: "{{ installed_casks_raw.stdout_lines | default([]) }}"
+
+# ── Define desired packages ──
+
+- name: Define desired taps
+  ansible.builtin.set_fact:
+    desired_taps:
+      - unhappychoice/tap
+      - shivammathur/php
+      - shivammathur/extensions
+      - laradumps/app
+      - deligoez/cask
+      - gromgit/brewtils
+      - 4ier/tap
+      - ankitpokhrel/jira-cli
+      - zjrosen/perles
+      - crossoverjie/skilldeck
+
+- name: Define desired formulae
+  ansible.builtin.set_fact:
+    desired_formulae:
+      # Core CLI Tools
+      - bash
+      - coreutils
+      - curl
+      - bat
+      - difftastic
+      - fzf
+      - jq
+      - parallel
+      - pv
+      - ripgrep
+      # Git
+      - git
+      - gh
+      - forgit
+      - git-filter-repo
+      - lazygit
+      - scmpuff
+      - unhappychoice/tap/gitlogue
+      # Shell & Terminal
+      - fish
+      - starship
+      - zoxide
+      - zellij
+      # Editors
+      - neovim
+      # PHP
+      - shivammathur/php/php
+      - shivammathur/extensions/xdebug@8.5
+      - shivammathur/extensions/phpredis@8.5
+      - shivammathur/extensions/pcov@8.5
+      - shivammathur/extensions/imagick@8.5
+      - shivammathur/extensions/igbinary@8.5
+      - shivammathur/extensions/msgpack@8.5
+      - composer
+      # Node.js
+      - node
+      - pnpm
+      # Go
+      - go
+      - goreleaser
+      # Rust
+      - rust
+      # Python
+      - pipx
+      - uv
+      # DevOps & Infrastructure
+      - awscli
+      - k9s
+      - kubernetes-cli
+      - dnsmasq
+      # Media & Image Processing
+      - ffmpeg
+      - ghostscript
+      - gifsicle
+      - imagemagick
+      - jpegoptim
+      - pngquant
+      - poppler
+      - rubberband
+      - zbar
+      # Documentation & Markdown
+      - glow
+      - pandoc
+      # AI & LLM Tools
+      - llmfit
+      - opencode
+      # Dotfile & Tap Management
+      - chezmoi
+      - mas
+      - gromgit/brewtils/taproom
+      # Testing & Profiling
+      - antlr
+      - asciinema
+      - bats-core
+      - mactop
+      # Misc CLI
+      - graphviz
+      - lzip
+      - mydumper
+      - mole
+      - pkgconf
+      # Third-Party CLI
+      - 4ier/tap/notion-cli
+      - ankitpokhrel/jira-cli/jira-cli
+      - zjrosen/perles/perles
+
+- name: Define desired casks
+  ansible.builtin.set_fact:
+    desired_casks:
+      # Editors
+      - cursor
+      - emdash
+      - sublime-text
+      - zed
+      # PHP
+      - laradumps/app/laradumps
+      - tinkerwell
+      - deligoez/cask/xdebug-toggler
+      # API & Networking
+      - bruno
+      # DevOps
+      - ngrok
+      # VPN
+      - openvpn-connect
+      # AI & LLM
+      - opencode-desktop
+      # Productivity
+      - 1password
+      - adguard
+      - bitwarden
+      - keka
+      - localsend
+      - notion
+      - obsidian
+      - telegram
+      # Browsers
+      - google-chrome
+      # Terminals
+      - ghostty
+      # Developer Apps
+      - qlmarkdown
+      - superkey
+      # Utilities
+      - balenaetcher
+      # Virtualization
+      - parallels@20
+      # Design & 3D
+      - affinity
+      - autodesk-fusion
+      - creality-print
+      - openscad
+      - sweet-home3d
+      # Gaming
+      - steam
+      # Education
+      - logisim-evolution
+      # Fonts
+      - font-iosevka
+      # Third-Party Casks
+      - crossoverjie/skilldeck/skilldeck
+      # Setapp
+      - setapp
+
+# ── Compute missing packages ──
+
+- name: Find missing taps
+  ansible.builtin.set_fact:
+    missing_taps: "{{ desired_taps | difference(installed_taps) }}"
+
+- name: Find missing formulae
+  ansible.builtin.set_fact:
+    missing_formulae: >-
+      {{ desired_formulae | reject('regex', '^(' +
+         installed_formulae | map('regex_escape') | join('|') + ')$')
+         | reject('regex', '.*/(' +
+         installed_formulae | map('regex_escape') | join('|') + ')$')
+         | list }}
+
+- name: Find missing casks
+  ansible.builtin.set_fact:
+    missing_casks: >-
+      {{ desired_casks | reject('regex', '^(' +
+         installed_casks | map('regex_escape') | join('|') + ')$')
+         | reject('regex', '.*/(' +
+         installed_casks | map('regex_escape') | join('|') + ')$')
+         | list }}
+
+- name: Show missing package counts
+  ansible.builtin.debug:
+    msg: "Missing: {{ missing_taps | length }} taps, {{ missing_formulae | length }} formulae, {{ missing_casks | length }} casks"
+
+# ── Install only missing packages ──
+
+- name: Add missing Homebrew taps
   community.general.homebrew_tap:
     name: "{{ item }}"
     state: present
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop:
-    - unhappychoice/tap
-    - shivammathur/php
-    - shivammathur/extensions
-    - laradumps/app
-    - deligoez/cask
-    - gromgit/brewtils
-    - 4ier/tap
-    - ankitpokhrel/jira-cli
-    - zjrosen/perles
-    - crossoverjie/skilldeck
+  loop: "{{ missing_taps }}"
 
-# ── Formulae ──
-
-- name: Install Homebrew formulae
+- name: Install missing Homebrew formulae
   community.general.homebrew:
     name: "{{ item }}"
     state: present
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop:
-    # Core CLI Tools
-    - bash
-    - coreutils
-    - curl
-    - bat
-    - difftastic
-    - fzf
-    - jq
-    - parallel
-    - pv
-    - ripgrep
-    # Git
-    - git
-    - gh
-    - forgit
-    - git-filter-repo
-    - lazygit
-    - scmpuff
-    - unhappychoice/tap/gitlogue
-    # Shell & Terminal
-    - fish
-    - starship
-    - zoxide
-    - zellij
-    # Editors
-    - neovim
-    # PHP
-    - shivammathur/php/php
-    - shivammathur/extensions/xdebug@8.5
-    - shivammathur/extensions/phpredis@8.5
-    - shivammathur/extensions/pcov@8.5
-    - shivammathur/extensions/imagick@8.5
-    - shivammathur/extensions/igbinary@8.5
-    - shivammathur/extensions/msgpack@8.5
-    - composer
-    # Node.js
-    - node
-    - pnpm
-    # Go
-    - go
-    - goreleaser
-    # Rust
-    - rust
-    # Python
-    - pipx
-    - uv
-    # Databases (non-service)
-    # mysql and redis handled separately below (restart_service)
-    # DevOps & Infrastructure
-    - awscli
-    - k9s
-    - kubernetes-cli
-    # nginx handled separately below (restart_service)
-    - dnsmasq
-    # Media & Image Processing
-    - ffmpeg
-    - ghostscript
-    - gifsicle
-    - imagemagick
-    - jpegoptim
-    - pngquant
-    - poppler
-    - rubberband
-    - zbar
-    # Documentation & Markdown
-    - glow
-    - pandoc
-    # AI & LLM Tools
-    - llmfit
-    - opencode
-    # Dotfile & Tap Management
-    - chezmoi
-    - mas
-    - gromgit/brewtils/taproom
-    # Testing & Profiling
-    - antlr
-    - asciinema
-    - bats-core
-    - mactop
-    # Misc CLI
-    - graphviz
-    - lzip
-    - mydumper
-    - mole
-    - pkgconf
-    # Third-Party CLI
-    - 4ier/tap/notion-cli
-    - ankitpokhrel/jira-cli/jira-cli
-    - zjrosen/perles/perles
+  loop: "{{ missing_formulae }}"
 
 # ── Formulae with services ──
 
@@ -137,6 +254,7 @@
   environment: "{{ homebrew_env }}"
   register: mysql_install
   ignore_errors: true
+  when: "'mysql@8.0' not in installed_formulae"
 
 - name: Link MySQL
   ansible.builtin.shell: /opt/homebrew/bin/brew link mysql@8.0 --force
@@ -159,6 +277,7 @@
   environment: "{{ homebrew_env }}"
   register: redis_install
   ignore_errors: true
+  when: "'redis' not in installed_formulae"
 
 - name: Restart Redis service
   ansible.builtin.shell: /opt/homebrew/bin/brew services restart redis
@@ -174,6 +293,7 @@
   environment: "{{ homebrew_env }}"
   register: nginx_install
   ignore_errors: true
+  when: "'nginx' not in installed_formulae"
 
 - name: Restart Nginx service
   ansible.builtin.shell: /opt/homebrew/bin/brew services restart nginx
@@ -190,67 +310,14 @@
 
 # ── Casks ──
 
-- name: Install Homebrew casks
+- name: Install missing Homebrew casks
   community.general.homebrew_cask:
     name: "{{ item }}"
     state: present
     sudo_password: "{{ ansible_become_pass | default(omit) }}"
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop:
-    # Editors
-    - cursor
-    - emdash
-    - sublime-text
-    - zed
-    # PHP
-    - laradumps/app/laradumps
-    - tinkerwell
-    - deligoez/cask/xdebug-toggler
-    # API & Networking
-    - bruno
-    # DevOps
-    - ngrok
-    # VPN
-    - openvpn-connect
-    # AI & LLM
-    - opencode-desktop
-    # Productivity
-    - 1password
-    - adguard
-    - bitwarden
-    - keka
-    - localsend
-    - notion
-    - obsidian
-    - telegram
-    # Browsers
-    - google-chrome
-    # Terminals
-    - ghostty
-    # Developer Apps
-    - qlmarkdown
-    - superkey
-    # Utilities
-    - balenaetcher
-    # Virtualization
-    - parallels@20
-    # Design & 3D
-    - affinity
-    - autodesk-fusion
-    - creality-print
-    - openscad
-    - sweet-home3d
-    # Gaming
-    - steam
-    # Education
-    - logisim-evolution
-    # Fonts
-    - font-iosevka
-    # Third-Party Casks
-    - crossoverjie/skilldeck/skilldeck
-    # Setapp
-    - setapp
+  loop: "{{ missing_casks }}"
 
 # ── Mac App Store ──
 
