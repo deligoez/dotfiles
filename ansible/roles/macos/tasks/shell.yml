@@ -1,0 +1,19 @@
+---
+- name: Check if Fish is in /etc/shells
+  ansible.builtin.command: grep -q /opt/homebrew/bin/fish /etc/shells
+  register: fish_in_shells
+  changed_when: false
+  failed_when: false
+
+- name: Add Fish to /etc/shells
+  ansible.builtin.shell: echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
+  when: fish_in_shells.rc != 0
+
+- name: Get current default shell
+  ansible.builtin.command: dscl . -read /Users/{{ ansible_facts.env.USER }} UserShell
+  register: current_shell
+  changed_when: false
+
+- name: Set Fish as default shell
+  ansible.builtin.command: chsh -s /opt/homebrew/bin/fish
+  when: "'/opt/homebrew/bin/fish' not in current_shell.stdout"
