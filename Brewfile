@@ -1,63 +1,71 @@
-# ── Dotfile Management ──
-brew "chezmoi"                                      # Manage dotfiles across machines
-
 # ── Core CLI Tools ──
-brew "git"                                          # Version control
+brew "bash"                                         # Bash 5.x (macOS ships 3.2)
+brew "coreutils"                                    # GNU coreutils (gls, gdate, etc.)
 brew "curl"                                         # HTTP client
 brew "bat"                                          # cat with syntax highlighting
 brew "difftastic"                                   # Structural diff tool
-brew "gh"                                           # GitHub CLI
+brew "fzf"                                          # Fuzzy finder
 brew "jq"                                           # JSON processor
+brew "parallel"                                     # Run commands in parallel
 brew "pv"                                           # Pipe viewer (progress bar)
 brew "ripgrep"                                      # Fast recursive search
+
+# ── Git ──
+brew "git"                                          # Version control
+brew "gh"                                           # GitHub CLI
+brew "forgit"                                       # Interactive git with fzf
+brew "git-filter-repo"                              # Rewrite git history
+brew "lazygit"                                      # Terminal UI for git
+brew "scmpuff"                                      # Numbered git status shortcuts
+
+tap "unhappychoice/tap"
+brew "unhappychoice/tap/gitlogue"                   # Git log viewer
 
 # ── Shell & Terminal ──
 brew "fish"                                         # Friendly interactive shell
 brew "starship"                                     # Cross-shell prompt
 brew "zoxide"                                       # Smarter cd command
-brew "zellij"                                       # Terminal workspace (Rust)
-
-# ── Git Extras ──
-brew "forgit"                                       # Interactive git with fzf
-brew "lazygit"                                      # Terminal UI for git
-brew "scmpuff"                                      # Numbered git status shortcuts
-tap "unhappychoice/tap"
-brew "unhappychoice/tap/gitlogue"                   # Git log viewer
+brew "zellij"                                       # Terminal workspace
 
 # ── Editors ──
 brew "neovim"                                       # Vim-based editor
+cask "cursor"                                       # AI code editor
+cask "emdash"                                       # AI writing editor
 cask "sublime-text"                                 # Fast text editor
 cask "zed"                                          # GPU-accelerated editor
 
 # ── PHP ──
 tap "shivammathur/php"
+brew "shivammathur/php/php", restart_service: :changed  # PHP (shivammathur tap)
+
 tap "shivammathur/extensions"
-tap "laradumps/app"
-tap "deligoez/cask"
-brew "shivammathur/php/php"                         # PHP (shivammathur tap)
-brew "php", restart_service: :changed               # PHP (homebrew core)
-brew "composer"                                     # PHP dependency manager
-brew "shivammathur/extensions/igbinary@8.4"         # Binary serializer
-brew "shivammathur/extensions/igbinary@8.5"
-brew "shivammathur/extensions/imagick@8.4"          # Image processing
-brew "shivammathur/extensions/imagick@8.5"
-brew "shivammathur/extensions/msgpack@8.4"          # Binary serialization
-brew "shivammathur/extensions/msgpack@8.5"
-brew "shivammathur/extensions/pcov@8.4"             # Code coverage
-brew "shivammathur/extensions/pcov@8.5"
+brew "shivammathur/extensions/xdebug@8.5"           # Debugger & profiler
 brew "shivammathur/extensions/phpredis@8.5"         # Redis extension
-brew "shivammathur/extensions/xdebug@8.4"           # Debugger & profiler
-brew "shivammathur/extensions/xdebug@8.5"
-cask "laradumps/app/laradumps"                      # Laravel debug tool
+brew "shivammathur/extensions/pcov@8.5"             # Code coverage
+brew "shivammathur/extensions/imagick@8.5"          # Image processing
+brew "shivammathur/extensions/igbinary@8.5"         # Binary serializer
+brew "shivammathur/extensions/msgpack@8.5"          # Binary serialization
+
+brew "composer"                                     # PHP dependency manager
+
 cask "tinkerwell"                                   # PHP REPL / scratchpad
+
+tap "laradumps/app"
+cask "laradumps/app/laradumps"                      # Laravel debug tool
+
+tap "deligoez/cask"
 cask "deligoez/cask/xdebug-toggler"                 # Toggle Xdebug on/off
 
 # ── Node.js ──
-brew "node@22"                                      # JavaScript runtime (LTS)
+brew "node"                                         # JavaScript runtime (latest)
 brew "pnpm"                                         # Fast package manager
 
 # ── Go ──
 brew "go"                                           # Go programming language
+brew "goreleaser"                                   # Release automation for Go
+
+# ── Rust ──
+brew "rust"                                         # Rust programming language
 
 # ── Python ──
 brew "pipx"                                         # Install Python CLI tools
@@ -66,19 +74,20 @@ brew "uv"                                           # Fast Python package manage
 # ── Databases ──
 brew "mysql@8.0", restart_service: :changed, link: true  # MySQL server
 brew "redis", restart_service: :changed             # In-memory key-value store
-cask "tableplus"                                    # Database GUI client
+# TablePlus is installed via Setapp (see below)
+
+# ── API & Networking Tools ──
+cask "bruno"                                        # API client (Postman alternative)
 
 # ── DevOps & Infrastructure ──
 brew "awscli"                                       # AWS command line
+brew "k9s"                                          # Kubernetes TUI
 brew "kubernetes-cli"                               # kubectl
 brew "nginx", restart_service: :changed             # Web server / reverse proxy
 brew "dnsmasq"                                      # Local DNS resolver
-cask "docker-desktop"                               # Container runtime
 cask "ngrok"                                        # Expose localhost to internet
 
 # ── Networking & VPN ──
-brew "openvpn"                                      # OpenVPN client
-brew "wireguard-tools"                              # WireGuard VPN tools
 cask "openvpn-connect"                              # OpenVPN GUI
 
 # ── Media & Image Processing ──
@@ -94,37 +103,68 @@ brew "zbar"                                         # Barcode/QR reader
 
 # ── Documentation & Markdown ──
 brew "glow"                                         # Render markdown in terminal
-brew "mdcat"                                        # Render markdown with images
 brew "pandoc"                                       # Document format converter
 
 # ── AI & LLM Tools ──
 brew "llmfit"                                       # LLM fine-tuning tool
 brew "opencode"                                     # AI coding assistant (CLI)
-cask "codex"                                        # OpenAI Codex app
 cask "opencode-desktop"                             # OpenCode GUI
+
+# ── Dotfile & Tap Management ──
+brew "chezmoi"                                      # Manage dotfiles across machines
+brew "mas"                                          # Mac App Store CLI
+
+tap "gromgit/brewtils"
+brew "gromgit/brewtils/taproom"                     # Interactive TUI for Homebrew
+
+# ── Testing & Profiling ──
+brew "antlr"                                        # Parser generator
+brew "asciinema"                                    # Record terminal sessions
+brew "bats-core"                                    # Bash test framework
+brew "mactop"                                       # macOS activity monitor
+
+# ── Misc CLI ──
+brew "graphviz"                                     # Graph visualization (dot)
+brew "lzip"                                         # Lossless data compressor
+brew "mydumper"                                     # MySQL parallel backup
+brew "mole"                                         # Mac cleaner & optimizer
+brew "pkgconf"                                      # Package config helper
+
+# ── Third-Party CLI ──
+tap "4ier/tap"
+brew "4ier/tap/notion-cli"                          # Notion CLI client
+
+tap "ankitpokhrel/jira-cli"
+brew "ankitpokhrel/jira-cli/jira-cli"               # Jira CLI client
+
+tap "zjrosen/perles"
+brew "zjrosen/perles/perles"                        # Perl-like CLI utils
 
 # ── Productivity Apps ──
 cask "1password"                                    # Password manager
+cask "adguard"                                      # Ad blocker
 cask "bitwarden"                                    # Open-source password manager
 cask "keka"                                         # File archiver (7z, zip, rar)
+cask "localsend"                                    # Cross-platform file sharing
 cask "notion"                                       # Notes & project management
 cask "obsidian"                                     # Markdown knowledge base
-cask "raycast"                                      # Launcher & productivity
 cask "telegram"                                     # Messaging app
-cask "spotify"                                      # Music streaming
 
 # ── Browsers ──
 cask "google-chrome"                                # Web browser
 
-# ── Developer Apps ──
+# ── Terminals ──
 cask "ghostty"                                      # GPU-accelerated terminal
-cask "wezterm"                                      # GPU-accelerated terminal (Lua config)
-cask "jetbrains-toolbox"                            # JetBrains IDE manager
+
+# ── Developer Apps ──
 cask "qlmarkdown"                                   # Quick Look markdown preview
+cask "superkey"                                     # Keyboard shortcut overlay
+
+# ── Utilities ──
+cask "balenaetcher"                                 # USB/SD image flasher
 
 # ── Virtualization ──
-cask "parallels@19"                                 # macOS/Windows VM
-cask "utm"                                          # QEMU-based VM (free)
+cask "parallels@20"                                 # macOS/Windows VM
 
 # ── Design & 3D ──
 cask "affinity"                                     # Photo/design suite
@@ -142,36 +182,7 @@ cask "logisim-evolution"                            # Digital logic simulator
 # ── Fonts ──
 cask "font-iosevka"                                 # Monospace coding font
 
-# ── Testing & Profiling ──
-brew "antlr"                                        # Parser generator
-brew "asciinema"                                    # Record terminal sessions
-brew "bats-core"                                    # Bash test framework
-brew "jmeter"                                       # Load testing tool
-brew "mactop"                                       # macOS activity monitor (Rust)
-
-# ── Misc CLI ──
-brew "graphviz"                                     # Graph visualization (dot)
-brew "lzip"                                         # Lossless data compressor
-brew "mas"                                          # Mac App Store CLI
-brew "mydumper"                                     # MySQL parallel backup
-brew "mole"                                         # SSH tunnel manager
-brew "pkgconf"                                      # Package config helper
-
-# ── Misc Taps & Tools ──
-tap "4ier/tap"
-brew "4ier/tap/notion-cli"                          # Notion CLI client
-tap "ankitpokhrel/jira-cli"
-brew "ankitpokhrel/jira-cli/jira-cli"               # Jira CLI client
-tap "atlassian-labs/acli"
-brew "atlassian-labs/acli/acli"                     # Atlassian CLI (Confluence, Jira)
-tap "gromgit/brewtils"
-brew "gromgit/brewtils/taproom"                     # Manage Homebrew taps
-tap "steveyegge/beads"
-brew "steveyegge/beads/bd"                          # Beads language tools
-tap "zjrosen/perles"
-brew "zjrosen/perles/perles"                        # Perl-like CLI utils
-tap "zurawiki/brews"
-brew "zurawiki/brews/gptcommit"                     # AI-generated commit messages
+# ── Third-Party Casks ──
 tap "crossoverjie/skilldeck"
 cask "crossoverjie/skilldeck/skilldeck"             # Skill deck app
 
@@ -183,3 +194,23 @@ mas "Pages", id: 409201541                          # Apple word processor
 mas "Under My Roof", id: 1524335878                 # Home inventory tracker
 mas "Windows App", id: 1295203466                   # Microsoft Remote Desktop
 mas "WireGuard", id: 1451685025                     # WireGuard VPN client
+
+# ── Setapp (installed via Setapp UI after cask "setapp") ──
+cask "setapp"                                       # App subscription manager
+# Bartender          — Menu bar manager
+# BetterZip          — Archive tool
+# CleanMyMac         — System cleaner
+# CleanShot X        — Screenshot & recording
+# CodeRunner         — Multi-language code editor
+# Dato               — Menu bar calendar
+# Lungo              — Keep Mac awake
+# Marked             — Markdown previewer
+# MindNode Classic   — Mind mapping
+# Proxyman           — HTTP debugging proxy
+# TablePlus          — Database GUI client
+# Tiny Shield        — Ad blocker
+# Ulysses            — Writing app
+
+# ── Manual Install (not available via Homebrew) ──
+# Soloterm           — https://soloterm.com
+# Tuna               — https://tunaformac.com
