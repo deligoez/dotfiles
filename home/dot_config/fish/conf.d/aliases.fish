@@ -16,9 +16,6 @@ abbr -a gf  git fetch
 abbr -a gfc git findcommit
 abbr -a gfm git findmessage
 
-# Dotfiles — pull latest and apply configs
-alias cma="chezmoi update"
-
 # Laravel / PHP
 alias a="php artisan"
 alias artisan="php artisan"
