@@ -189,7 +189,6 @@ tap "crossoverjie/skilldeck"
 cask "crossoverjie/skilldeck/skilldeck"             # Skill deck app
 
 # ── Mac App Store ──
-mas "1Password for Safari", id: 1569813296          # Safari password autofill
 mas "Network Radar", id: 507659816                  # Network scanner
 mas "Numbers", id: 409203825                        # Apple spreadsheet
 mas "Pages", id: 409201541                          # Apple word processor

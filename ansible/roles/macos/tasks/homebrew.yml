@@ -349,7 +349,6 @@
 - name: Install Mac App Store apps
   community.general.mas:
     id:
-      - 1569813296  # 1Password for Safari
       - 507659816   # Network Radar
       - 409203825   # Numbers
       - 409201541   # Pages
