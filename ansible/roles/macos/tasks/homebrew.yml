@@ -329,20 +329,6 @@
 
 # ── Mac App Store ──
 
-- name: Check App Store login
-  ansible.builtin.command: /opt/homebrew/bin/mas account
-  environment: "{{ homebrew_env }}"
-  register: mas_account
-  changed_when: false
-  failed_when: false
-
-- name: Prompt for App Store login
-  ansible.builtin.pause:
-    prompt: >-
-      ⚠️  Not signed in to the App Store.
-      Please open App Store, sign in with your Apple Account, then press Enter to continue
-  when: mas_account.rc != 0
-
 - name: Install Mac App Store apps
   community.general.mas:
     id:
