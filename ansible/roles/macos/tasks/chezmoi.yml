@@ -1,7 +1,7 @@
 ---
 - name: Initialize chezmoi
   ansible.builtin.command:
-    cmd: /opt/homebrew/bin/chezmoi init --source={{ playbook_dir }}/../home --apply
+    cmd: /opt/homebrew/bin/chezmoi init --source={{ playbook_dir }}/../home --apply --force
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
   register: chezmoi_init

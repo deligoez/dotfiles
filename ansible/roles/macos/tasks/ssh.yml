@@ -33,7 +33,7 @@
   ansible.builtin.pause:
     prompt: >-
       ⚠️  GitHub CLI is not authenticated.
-      In another terminal run: gh auth login
+      In another terminal run: gh auth login -s admin:public_key
       Then press Enter here to continue
   when: gh_auth.rc != 0
 
@@ -64,6 +64,7 @@
     cmd: /opt/homebrew/bin/gh ssh-key add {{ ansible_facts.env.HOME }}/.ssh/id_ed25519.pub --title "{{ ansible_facts.hostname }}"
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: gh_key_add
   when: gh_authenticated and (gh_key_check.rc | default(1)) != 0
   ignore_errors: true
 
@@ -75,7 +76,12 @@
   changed_when: false
   when: gh_authenticated
 
+- name: Warn if SSH key upload failed
+  ansible.builtin.debug:
+    msg: "⚠️  SSH key upload failed. Run 'gh auth refresh -h github.com -s admin:public_key' then 'dotfiles --tags ssh' to retry."
+  when: gh_authenticated and (gh_key_add.rc | default(0)) != 0 and (gh_key_check.rc | default(1)) != 0
+
 - name: Warn if GitHub CLI not authenticated
   ansible.builtin.debug:
-    msg: "⚠️  GitHub CLI not authenticated — SSH key not uploaded and git credential helper not configured. Run 'gh auth login' then 'dotfiles' to complete."
+    msg: "⚠️  GitHub CLI not authenticated — SSH key not uploaded and git credential helper not configured. Run 'gh auth login -s admin:public_key' then 'dotfiles' to complete."
   when: not gh_authenticated
