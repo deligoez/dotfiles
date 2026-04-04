@@ -184,7 +184,6 @@
       - parallels@20
       # Design & 3D
       - affinity
-      - autodesk-fusion
       - creality-print
       - openscad
       - sweet-home3d
@@ -317,8 +316,7 @@
       - adguard
       - parallels@20
     # Casks with post-install steps that fail in automation (network, GUI)
-    manual_casks:
-      - autodesk-fusion
+    manual_casks: []
 
 - name: Install missing Homebrew casks
   community.general.homebrew_cask:

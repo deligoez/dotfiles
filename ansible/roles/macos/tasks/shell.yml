@@ -19,5 +19,6 @@
   changed_when: false
 
 - name: Set Fish as default shell
-  ansible.builtin.command: chsh -s /opt/homebrew/bin/fish
+  ansible.builtin.command: dscl . -change /Users/{{ ansible_facts.env.USER }} UserShell {{ current_shell.stdout.split()[-1] }} /opt/homebrew/bin/fish
+  become: true
   when: "'/opt/homebrew/bin/fish' not in current_shell.stdout"

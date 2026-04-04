@@ -168,7 +168,6 @@ cask "parallels@20"                                 # macOS/Windows VM
 
 # ── Design & 3D ──
 cask "affinity"                                     # Photo/design suite
-cask "autodesk-fusion"                              # CAD/CAM 3D modeling
 cask "creality-print"                               # 3D printer slicer
 cask "openscad"                                     # Programmatic 3D CAD
 cask "sweet-home3d"                                 # Interior design planner
