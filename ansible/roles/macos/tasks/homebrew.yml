@@ -120,6 +120,7 @@
       - glow
       - pandoc
       # AI & LLM Tools
+      - claude-code
       - llmfit
       - opencode
       # Dotfile & Tap Management
@@ -162,6 +163,7 @@
       # VPN
       - openvpn-connect
       # AI & LLM
+      - claude
       - opencode-desktop
       # Productivity
       - 1password

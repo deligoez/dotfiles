@@ -106,8 +106,10 @@ brew "glow"                                         # Render markdown in termina
 brew "pandoc"                                       # Document format converter
 
 # ── AI & LLM Tools ──
+brew "claude-code"                                  # Claude Code CLI
 brew "llmfit"                                       # LLM fine-tuning tool
 brew "opencode"                                     # AI coding assistant (CLI)
+cask "claude"                                       # Claude desktop app
 cask "opencode-desktop"                             # OpenCode GUI
 
 # ── Dotfile & Tap Management ──
