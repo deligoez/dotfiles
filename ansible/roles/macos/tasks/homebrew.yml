@@ -1,8 +1,257 @@
 ---
-- name: Install packages from Brewfile
-  ansible.builtin.shell: /opt/homebrew/bin/brew bundle --file={{ playbook_dir }}/../Brewfile --verbose 2>&1 | while IFS= read -r line; do echo "$line"; done
-  register: brew_bundle
-  changed_when: "'Installing' in brew_bundle.stdout"
-  environment:
-    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
-    HOMEBREW_NO_AUTO_UPDATE: "1"
+# Homebrew package installation — parsed from Brewfile categories
+# Uses native Ansible modules for per-package feedback instead of brew bundle
+
+- name: Set Homebrew environment
+  ansible.builtin.set_fact:
+    homebrew_env:
+      PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_env.PATH }}"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+
+# ���─ Taps ──
+
+- name: Add Homebrew taps
+  community.general.homebrew_tap:
+    name: "{{ item }}"
+    state: present
+  environment: "{{ homebrew_env }}"
+  loop:
+    - unhappychoice/tap
+    - shivammathur/php
+    - shivammathur/extensions
+    - laradumps/app
+    - deligoez/cask
+    - gromgit/brewtils
+    - 4ier/tap
+    - ankitpokhrel/jira-cli
+    - zjrosen/perles
+    - crossoverjie/skilldeck
+
+# ── Formulae ──
+
+- name: Install Homebrew formulae
+  community.general.homebrew:
+    name: "{{ item }}"
+    state: present
+  environment: "{{ homebrew_env }}"
+  loop:
+    # Core CLI Tools
+    - bash
+    - coreutils
+    - curl
+    - bat
+    - difftastic
+    - fzf
+    - jq
+    - parallel
+    - pv
+    - ripgrep
+    # Git
+    - git
+    - gh
+    - forgit
+    - git-filter-repo
+    - lazygit
+    - scmpuff
+    - unhappychoice/tap/gitlogue
+    # Shell & Terminal
+    - fish
+    - starship
+    - zoxide
+    - zellij
+    # Editors
+    - neovim
+    # PHP
+    - shivammathur/php/php
+    - shivammathur/extensions/xdebug@8.5
+    - shivammathur/extensions/phpredis@8.5
+    - shivammathur/extensions/pcov@8.5
+    - shivammathur/extensions/imagick@8.5
+    - shivammathur/extensions/igbinary@8.5
+    - shivammathur/extensions/msgpack@8.5
+    - composer
+    # Node.js
+    - node
+    - pnpm
+    # Go
+    - go
+    - goreleaser
+    # Rust
+    - rust
+    # Python
+    - pipx
+    - uv
+    # Databases (non-service)
+    # mysql and redis handled separately below (restart_service)
+    # DevOps & Infrastructure
+    - awscli
+    - k9s
+    - kubernetes-cli
+    # nginx handled separately below (restart_service)
+    - dnsmasq
+    # Media & Image Processing
+    - ffmpeg
+    - ghostscript
+    - gifsicle
+    - imagemagick
+    - jpegoptim
+    - pngquant
+    - poppler
+    - rubberband
+    - zbar
+    # Documentation & Markdown
+    - glow
+    - pandoc
+    # AI & LLM Tools
+    - llmfit
+    - opencode
+    # Dotfile & Tap Management
+    - chezmoi
+    - mas
+    - gromgit/brewtils/taproom
+    # Testing & Profiling
+    - antlr
+    - asciinema
+    - bats-core
+    - mactop
+    # Misc CLI
+    - graphviz
+    - lzip
+    - mydumper
+    - mole
+    - pkgconf
+    # Third-Party CLI
+    - 4ier/tap/notion-cli
+    - ankitpokhrel/jira-cli/jira-cli
+    - zjrosen/perles/perles
+
+# ── Formulae with services ──
+
+- name: Install MySQL
+  community.general.homebrew:
+    name: mysql@8.0
+    state: present
+  environment: "{{ homebrew_env }}"
+  register: mysql_install
+
+- name: Link MySQL
+  ansible.builtin.shell: /opt/homebrew/bin/brew link mysql@8.0 --force
+  environment: "{{ homebrew_env }}"
+  when: mysql_install.changed
+  changed_when: true
+
+- name: Restart MySQL service
+  ansible.builtin.shell: /opt/homebrew/bin/brew services restart mysql@8.0
+  environment: "{{ homebrew_env }}"
+  when: mysql_install.changed
+  changed_when: true
+
+- name: Install Redis
+  community.general.homebrew:
+    name: redis
+    state: present
+  environment: "{{ homebrew_env }}"
+  register: redis_install
+
+- name: Restart Redis service
+  ansible.builtin.shell: /opt/homebrew/bin/brew services restart redis
+  environment: "{{ homebrew_env }}"
+  when: redis_install.changed
+  changed_when: true
+
+- name: Install Nginx
+  community.general.homebrew:
+    name: nginx
+    state: present
+  environment: "{{ homebrew_env }}"
+  register: nginx_install
+
+- name: Restart Nginx service
+  ansible.builtin.shell: /opt/homebrew/bin/brew services restart nginx
+  environment: "{{ homebrew_env }}"
+  when: nginx_install.changed
+  changed_when: true
+
+- name: Start PHP service
+  ansible.builtin.shell: /opt/homebrew/bin/brew services start php
+  environment: "{{ homebrew_env }}"
+  changed_when: false
+  ignore_errors: true
+
+# ── Casks ──
+
+- name: Install Homebrew casks
+  community.general.homebrew_cask:
+    name: "{{ item }}"
+    state: present
+  environment: "{{ homebrew_env }}"
+  loop:
+    # Editors
+    - cursor
+    - emdash
+    - sublime-text
+    - zed
+    # PHP
+    - laradumps/app/laradumps
+    - tinkerwell
+    - deligoez/cask/xdebug-toggler
+    # API & Networking
+    - bruno
+    # DevOps
+    - ngrok
+    # VPN
+    - openvpn-connect
+    # AI & LLM
+    - opencode-desktop
+    # Productivity
+    - 1password
+    - adguard
+    - bitwarden
+    - keka
+    - localsend
+    - notion
+    - obsidian
+    - telegram
+    # Browsers
+    - google-chrome
+    # Terminals
+    - ghostty
+    # Developer Apps
+    - qlmarkdown
+    - superkey
+    # Utilities
+    - balenaetcher
+    # Virtualization
+    - parallels@20
+    # Design & 3D
+    - affinity
+    - autodesk-fusion
+    - creality-print
+    - openscad
+    - sweet-home3d
+    # Gaming
+    - steam
+    # Education
+    - logisim-evolution
+    # Fonts
+    - font-iosevka
+    # Third-Party Casks
+    - crossoverjie/skilldeck/skilldeck
+    # Setapp
+    - setapp
+
+# ── Mac App Store ──
+
+- name: Install Mac App Store apps
+  community.general.mas:
+    id:
+      - 1569813296  # 1Password for Safari
+      - 507659816   # Network Radar
+      - 409203825   # Numbers
+      - 409201541   # Pages
+      - 1524335878  # Under My Roof
+      - 1295203466  # Windows App
+      - 1451685025  # WireGuard
+    state: present
+  environment: "{{ homebrew_env }}"
