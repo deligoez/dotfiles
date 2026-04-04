@@ -310,14 +310,29 @@
 
 # ── Casks ──
 
+- name: Define casks requiring sudo (pkg installers)
+  ansible.builtin.set_fact:
+    sudo_casks:
+      - openvpn-connect
+      - adguard
+      - parallels@20
+
 - name: Install missing Homebrew casks
   community.general.homebrew_cask:
     name: "{{ item }}"
     state: present
-    sudo_password: "{{ ansible_become_pass | default(omit) }}"
   environment: "{{ homebrew_env }}"
   ignore_errors: true
-  loop: "{{ missing_casks }}"
+  loop: "{{ missing_casks | difference(sudo_casks) }}"
+
+- name: Install missing Homebrew casks (sudo required)
+  community.general.homebrew_cask:
+    name: "{{ item }}"
+    state: present
+    sudo_password: "{{ ansible_become_password | default('') }}"
+  environment: "{{ homebrew_env }}"
+  ignore_errors: true
+  loop: "{{ missing_casks | intersect(sudo_casks) }}"
 
 # ── Mac App Store ──
 
