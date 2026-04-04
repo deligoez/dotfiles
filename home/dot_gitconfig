@@ -1,0 +1,10 @@
+[user]
+	email = ye@deligoz.me
+	name = Yunus Emre Deligöz
+[push]
+	autoSetupRemote = true
+[core]
+	autocrlf = input
+	excludesfile = ~/.gitignore_global
+[diff]
+	external = difft
