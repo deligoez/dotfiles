@@ -323,7 +323,6 @@
   community.general.homebrew_cask:
     name: "{{ item }}"
     state: present
-    install_options: no-quarantine
   environment: "{{ homebrew_env }}"
   ignore_errors: true
   loop: "{{ missing_casks | difference(manual_casks) }}"

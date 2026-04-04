@@ -16,6 +16,19 @@ abbr -a gf  git fetch
 abbr -a gfc git findcommit
 abbr -a gfm git findmessage
 
+# Dotfiles
+function dotfiles
+    cd ~/Developer/github/deligoez/dotfiles \
+    && git pull \
+    && PATH=$HOME/.local/bin:/opt/homebrew/bin:$PATH \
+      ANSIBLE_CONFIG=~/Developer/github/deligoez/dotfiles/ansible/ansible.cfg \
+      ansible-playbook ~/Developer/github/deligoez/dotfiles/ansible/site.yml \
+        -i ~/Developer/github/deligoez/dotfiles/ansible/inventory.yml \
+        --limit macos \
+        --ask-become-pass \
+        $argv
+end
+
 # Laravel / PHP
 alias a="php artisan"
 alias artisan="php artisan"

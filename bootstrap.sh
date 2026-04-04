@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 # bootstrap.sh — Bootstrap Ansible on a clean machine, then hand off
-# Usage: curl -fsSL dotfiles.deligoz.me | zsh
+# Usage:
+#   curl -fsSL dotfiles.deligoz.me | zsh
+#   curl -fsSL dotfiles.deligoz.me | zsh -s -- --skip-tags macos-defaults
 #
 # This script does the MINIMUM to get Ansible running:
 #   1. TTY fix (for curl pipe)
@@ -21,7 +23,7 @@ if [[ ! -t 0 ]]; then
     curl -fsSL -H "Cache-Control: no-cache" \
         "https://raw.githubusercontent.com/deligoez/dotfiles/master/bootstrap.sh" -o "$TMPFILE"
     chmod +x "$TMPFILE"
-    exec zsh "$TMPFILE" </dev/tty
+    exec zsh "$TMPFILE" "$@" </dev/tty
 fi
 
 DOTFILES_DIR="$HOME/Developer/github/deligoez/dotfiles"
@@ -111,12 +113,15 @@ ANSIBLE_CONFIG="$DOTFILES_DIR/ansible/ansible.cfg" \
 ansible-playbook "$DOTFILES_DIR/ansible/site.yml" \
     -i "$DOTFILES_DIR/ansible/inventory.yml" \
     --limit "$OS" \
-    --ask-become-pass
+    --ask-become-pass \
+    "$@"
 
 # ── Step 6: Add 'dotfiles' alias to zsh ──
-ALIAS_LINE="alias dotfiles='cd $DOTFILES_DIR && git pull && PATH=\$HOME/.local/bin:/opt/homebrew/bin:\$PATH ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos --ask-become-pass'"
-if ! grep -q "alias dotfiles=" ~/.zshrc 2>/dev/null; then
-    echo "$ALIAS_LINE" >> ~/.zshrc
+FUNC_BLOCK="dotfiles() { cd $DOTFILES_DIR && git pull && PATH=\$HOME/.local/bin:/opt/homebrew/bin:\$PATH ANSIBLE_CONFIG=$DOTFILES_DIR/ansible/ansible.cfg ansible-playbook $DOTFILES_DIR/ansible/site.yml -i $DOTFILES_DIR/ansible/inventory.yml --limit macos --ask-become-pass \"\\\$@\"; }"
+if ! grep -q "dotfiles()" ~/.zshrc 2>/dev/null; then
+    # Remove old alias if present
+    sed -i '' '/alias dotfiles=/d' ~/.zshrc 2>/dev/null
+    echo "$FUNC_BLOCK" >> ~/.zshrc
 fi
 source ~/.zshrc
 

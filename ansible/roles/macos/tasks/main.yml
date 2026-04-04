@@ -12,6 +12,7 @@
   changed_when: false
   failed_when: false
   become: true
+  tags: [macos-defaults]
 
 - name: Prompt for App Management permission
   ansible.builtin.pause:
@@ -20,36 +21,37 @@
       Please go to System Settings > Privacy & Security > App Management
       and enable Terminal.app, then press Enter to continue
   when: app_mgmt_check.stdout != "1"
+  tags: [macos-defaults]
 
 # ── macOS settings first (fast, no dependencies) ──
 
 - name: Apply locale settings
   ansible.builtin.include_tasks: locale.yml
-  tags: [locale]
+  tags: [locale, macos-defaults]
 
 - name: Apply desktop settings
   ansible.builtin.include_tasks: desktop.yml
-  tags: [desktop]
+  tags: [desktop, macos-defaults]
 
 - name: Apply menu bar settings
   ansible.builtin.include_tasks: menubar.yml
-  tags: [menubar]
+  tags: [menubar, macos-defaults]
 
 - name: Apply input settings
   ansible.builtin.include_tasks: input.yml
-  tags: [input]
+  tags: [input, macos-defaults]
 
 - name: Apply finder settings
   ansible.builtin.include_tasks: finder.yml
-  tags: [finder]
+  tags: [finder, macos-defaults]
 
 - name: Apply dock settings
   ansible.builtin.include_tasks: dock.yml
-  tags: [dock]
+  tags: [dock, macos-defaults]
 
 - name: Apply app settings
   ansible.builtin.include_tasks: apps.yml
-  tags: [apps]
+  tags: [apps, macos-defaults]
 
 # ── Homebrew packages last (slow, may have failures) ──
 
