@@ -1,0 +1,33 @@
+---
+- name: Load Go tools list
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../go-tools.yml"
+
+- name: Install Go tools
+  ansible.builtin.command: /opt/homebrew/bin/go install {{ item.pkg }}
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.HOME }}/go/bin:{{ ansible_facts.env.PATH }}"
+    GOPATH: "{{ ansible_facts.env.HOME }}/go"
+  loop: "{{ go_tools }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+
+# ── rp bootstrap (after SSH keys for private repo access) ──
+
+- name: Check if rp manifest exists
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.config/rp/repos.yaml"
+  register: rp_manifest
+
+- name: Run rp bootstrap
+  ansible.builtin.command: "{{ ansible_facts.env.HOME }}/go/bin/rp bootstrap"
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.HOME }}/go/bin:{{ ansible_facts.env.PATH }}"
+    RP_MANIFEST: "{{ ansible_facts.env.HOME }}/.config/rp/repos.yaml"
+  when: rp_manifest.stat.exists
+
+- name: Warn if rp manifest missing
+  ansible.builtin.debug:
+    msg: "⚠️  rp manifest not found at ~/.config/rp/repos.yaml — run 'chezmoi apply' first to pull dotfiles-private"
+  when: not rp_manifest.stat.exists

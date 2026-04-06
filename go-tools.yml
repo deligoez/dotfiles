@@ -1,0 +1,6 @@
+---
+# Go tools installed via `go install`
+# Add new tools here — Ansible picks them up automatically
+go_tools:
+  - { name: "rp", pkg: "github.com/deligoez/rp@latest" }
+  - { name: "tp", pkg: "github.com/deligoez/tp@latest" }

@@ -16,3 +16,6 @@ fish_add_path ~/.cargo/bin
 
 # pipx / uv
 fish_add_path ~/.local/bin
+
+# rp (repo manager)
+set -gx RP_MANIFEST ~/.config/rp/repos.yaml

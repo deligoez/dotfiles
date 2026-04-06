@@ -190,8 +190,8 @@ cask "crossoverjie/skilldeck/skilldeck"             # Skill deck app
 
 # ── Mac App Store ──
 mas "Network Radar", id: 507659816                  # Network scanner
-mas "Numbers", id: 409203825                        # Apple spreadsheet
-mas "Pages", id: 409201541                          # Apple word processor
+mas "Numbers", id: 361304891                        # Apple spreadsheet
+mas "Pages", id: 361309726                          # Apple word processor
 mas "Under My Roof", id: 1524335878                 # Home inventory tracker
 mas "Windows App", id: 1295203466                   # Microsoft Remote Desktop
 mas "WireGuard", id: 1451685025                     # WireGuard VPN client

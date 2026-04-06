@@ -1,0 +1,6 @@
+# Pull private dotfiles into ~/.config/rp/
+# Contains repos.yaml (rp workspace manifest)
+.config/rp:
+  type: git-repo
+  url: git@github.com:deligoez/dotfiles-private.git
+  refreshPeriod: 24h

@@ -82,3 +82,9 @@
 - name: Setup SSH keys
   ansible.builtin.include_tasks: ssh.yml
   tags: [ssh]
+
+# ── Go tools & repo bootstrap (after SSH keys) ──
+
+- name: Install Go tools and bootstrap repos
+  ansible.builtin.include_tasks: go-tools.yml
+  tags: [go-tools, rp]

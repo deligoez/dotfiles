@@ -333,8 +333,8 @@
   ansible.builtin.set_fact:
     mas_apps:
       - { id: 507659816,  name: "Network Radar" }
-      - { id: 409203825,  name: "Numbers" }
-      - { id: 409201541,  name: "Pages" }
+      - { id: 361304891,  name: "Numbers" }
+      - { id: 361309726,  name: "Pages" }
       - { id: 1524335878, name: "Under My Roof" }
       - { id: 1295203466, name: "Windows App" }
       - { id: 1451685025, name: "WireGuard" }
