@@ -1,0 +1,6 @@
+---
+# Composer global packages
+# Add new packages here — Ansible picks them up automatically
+composer_packages:
+  - laravel/installer
+  - laravel/valet

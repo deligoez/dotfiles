@@ -83,6 +83,12 @@
   ansible.builtin.include_tasks: ssh.yml
   tags: [ssh]
 
+# ── Composer global packages (after PHP is installed) ──
+
+- name: Install Composer global packages
+  ansible.builtin.include_tasks: composer-packages.yml
+  tags: [composer]
+
 # ── Go tools & repo bootstrap (after SSH keys) ──
 
 - name: Install Go tools and bootstrap repos

@@ -1,0 +1,20 @@
+---
+- name: Load Composer packages list
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../composer-packages.yml"
+
+- name: Get installed Composer global packages
+  ansible.builtin.command: /opt/homebrew/bin/composer global show --no-interaction --format=json
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: composer_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install missing Composer global packages
+  ansible.builtin.command: /opt/homebrew/bin/composer global require {{ item }} --no-interaction
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  loop: "{{ composer_packages }}"
+  when: "item not in (composer_installed.stdout | default('{}') | from_json).installed | default([]) | map(attribute='name') | list"
+  changed_when: true
