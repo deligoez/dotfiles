@@ -89,8 +89,8 @@
   ansible.builtin.include_tasks: composer-packages.yml
   tags: [composer]
 
-# ── Go tools & repo bootstrap (after SSH keys) ──
+# ── Repo bootstrap (after SSH keys for private repo access) ──
 
-- name: Install Go tools and bootstrap repos
-  ansible.builtin.include_tasks: go-tools.yml
-  tags: [go-tools, rp]
+- name: Bootstrap repos with rp
+  ansible.builtin.include_tasks: rp-bootstrap.yml
+  tags: [rp]

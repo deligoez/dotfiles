@@ -46,6 +46,7 @@
       - shivammathur/extensions
       - laradumps/app
       - deligoez/cask
+      - deligoez/tap
       - gromgit/brewtils
       - 4ier/tap
       - ankitpokhrel/jira-cli
@@ -96,6 +97,9 @@
       # Go
       - go
       - goreleaser
+      - deligoez/tap/hc
+      - deligoez/tap/rp
+      - deligoez/tap/tp
       # Rust
       - rust
       # Python

@@ -64,6 +64,11 @@ brew "pnpm"                                         # Fast package manager
 brew "go"                                           # Go programming language
 brew "goreleaser"                                   # Release automation for Go
 
+tap "deligoez/tap"
+brew "deligoez/tap/hc"                              # Hunk-based atomic git commits
+brew "deligoez/tap/rp"                              # Repo manager
+brew "deligoez/tap/tp"                              # Task manager
+
 # ── Rust ──
 brew "rust"                                         # Rust programming language
 
