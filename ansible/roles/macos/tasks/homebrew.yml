@@ -45,6 +45,7 @@
       - shivammathur/php
       - shivammathur/extensions
       - laradumps/app
+      - allegro-php/tap
       - deligoez/cask
       - deligoez/tap
       - gromgit/brewtils
@@ -97,6 +98,7 @@
       # Go
       - go
       - goreleaser
+      - allegro-php/tap/allegro
       - deligoez/tap/hc
       - deligoez/tap/rp
       - deligoez/tap/tp

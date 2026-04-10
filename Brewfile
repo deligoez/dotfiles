@@ -64,6 +64,9 @@ brew "pnpm"                                         # Fast package manager
 brew "go"                                           # Go programming language
 brew "goreleaser"                                   # Release automation for Go
 
+tap "allegro-php/tap"
+brew "allegro-php/tap/allegro"                      # PHP code quality runner
+
 tap "deligoez/tap"
 brew "deligoez/tap/hc"                              # Hunk-based atomic git commits
 brew "deligoez/tap/rp"                              # Repo manager
