@@ -51,7 +51,6 @@
       - gromgit/brewtils
       - 4ier/tap
       - ankitpokhrel/jira-cli
-      - zjrosen/perles
       - crossoverjie/skilldeck
 
 - name: Define desired formulae
@@ -148,7 +147,6 @@
       # Third-Party CLI
       - 4ier/tap/notion-cli
       - ankitpokhrel/jira-cli/jira-cli
-      - zjrosen/perles/perles
 
 - name: Define desired casks
   ansible.builtin.set_fact:

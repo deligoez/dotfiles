@@ -147,10 +147,6 @@ brew "4ier/tap/notion-cli"                          # Notion CLI client
 
 tap "ankitpokhrel/jira-cli"
 brew "ankitpokhrel/jira-cli/jira-cli"               # Jira CLI client
-
-tap "zjrosen/perles"
-brew "zjrosen/perles/perles"                        # Perl-like CLI utils
-
 # ── Productivity Apps ──
 cask "1password"                                    # Password manager
 cask "adguard"                                      # Ad blocker
