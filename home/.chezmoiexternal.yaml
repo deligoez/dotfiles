@@ -1,6 +1,6 @@
-# Pull private dotfiles into ~/.config/rp/
-# Contains repos.yaml (rp workspace manifest)
-.config/rp:
+# Clone dotfiles-private into a hidden location.
+# chezmoi manages ~/.config/rp/manifest.yaml as a symlink to the file in this repo.
+.local/share/dotfiles-private:
   type: git-repo
   url: git@github.com:deligoez/dotfiles-private.git
   refreshPeriod: 24h

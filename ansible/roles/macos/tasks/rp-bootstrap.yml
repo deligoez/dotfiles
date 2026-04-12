@@ -1,17 +1,16 @@
 ---
 - name: Check if rp manifest exists
   ansible.builtin.stat:
-    path: "{{ ansible_facts.env.HOME }}/.config/rp/repos.yaml"
+    path: "{{ ansible_facts.env.HOME }}/.config/rp/manifest.yaml"
   register: rp_manifest
 
 - name: Run rp bootstrap
   ansible.builtin.command: /opt/homebrew/bin/rp bootstrap
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
-    RP_MANIFEST: "{{ ansible_facts.env.HOME }}/.config/rp/repos.yaml"
   when: rp_manifest.stat.exists
 
 - name: Warn if rp manifest missing
   ansible.builtin.debug:
-    msg: "⚠️  rp manifest not found at ~/.config/rp/repos.yaml — run 'chezmoi apply' first to pull dotfiles-private"
+    msg: "⚠️  rp manifest not found at ~/.config/rp/manifest.yaml — run 'chezmoi apply' first to pull dotfiles-private"
   when: not rp_manifest.stat.exists
