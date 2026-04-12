@@ -76,8 +76,19 @@ if [[ ! -d "$DOTFILES_DIR" ]]; then
     mkdir -p "$(dirname "$DOTFILES_DIR")"
     git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
 else
-    echo "📁 Dotfiles exist, pulling latest..."
-    git -C "$DOTFILES_DIR" pull --ff-only 2>/dev/null || true
+    echo "📁 Dotfiles exist, fetching latest..."
+    git -C "$DOTFILES_DIR" fetch origin
+    LOCAL=$(git -C "$DOTFILES_DIR" rev-parse HEAD)
+    REMOTE=$(git -C "$DOTFILES_DIR" rev-parse origin/master)
+    if [[ "$LOCAL" != "$REMOTE" ]]; then
+        if ! git -C "$DOTFILES_DIR" pull --ff-only; then
+            echo "⚠️  Could not fast-forward — local changes or divergent history."
+            echo "   Resolve manually in $DOTFILES_DIR, then re-run."
+            exit 1
+        fi
+    else
+        echo "✅ Already up to date."
+    fi
 fi
 
 # ── Step 4: Ansible Galaxy collections ──
