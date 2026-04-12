@@ -68,8 +68,8 @@ tap "allegro-php/tap"
 brew "allegro-php/tap/allegro"                      # PHP code quality runner
 
 tap "deligoez/tap"
-brew "deligoez/tap/hc"                              # Hunk-based atomic git commits
-brew "deligoez/tap/rp"                              # Repo manager
+brew "deligoez/tap/deligoez-hc"                     # Hunk-based atomic git commits
+brew "deligoez/tap/deligoez-rp"                     # Repo manager
 brew "deligoez/tap/tp"                              # Task manager
 
 # ── Rust ──

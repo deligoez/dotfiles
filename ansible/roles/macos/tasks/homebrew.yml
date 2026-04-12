@@ -99,8 +99,8 @@
       - go
       - goreleaser
       - allegro-php/tap/allegro
-      - deligoez/tap/hc
-      - deligoez/tap/rp
+      - deligoez/tap/deligoez-hc
+      - deligoez/tap/deligoez-rp
       - deligoez/tap/tp
       # Rust
       - rust
