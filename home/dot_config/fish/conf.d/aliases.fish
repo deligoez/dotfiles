@@ -18,12 +18,12 @@ abbr -a gfm git findmessage
 
 # Dotfiles
 function dotfiles
-    cd ~/Developer/github/deligoez/dotfiles \
+    cd ~/Developer/deligoez/dotfiles/dotfiles \
     && git pull \
     && PATH=$HOME/.local/bin:/opt/homebrew/bin:$PATH \
-      ANSIBLE_CONFIG=~/Developer/github/deligoez/dotfiles/ansible/ansible.cfg \
-      ansible-playbook ~/Developer/github/deligoez/dotfiles/ansible/site.yml \
-        -i ~/Developer/github/deligoez/dotfiles/ansible/inventory.yml \
+      ANSIBLE_CONFIG=~/Developer/deligoez/dotfiles/dotfiles/ansible/ansible.cfg \
+      ansible-playbook ~/Developer/deligoez/dotfiles/dotfiles/ansible/site.yml \
+        -i ~/Developer/deligoez/dotfiles/dotfiles/ansible/inventory.yml \
         --limit macos \
         --ask-become-pass \
         $argv

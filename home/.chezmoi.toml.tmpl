@@ -1,6 +1,6 @@
 {{- $phpVersion := output "/opt/homebrew/bin/php" "-r" "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" | trim -}}
 
-sourceDir = {{ joinPath .chezmoi.homeDir "Developer/github/deligoez/dotfiles/home" | quote }}
+sourceDir = {{ joinPath .chezmoi.homeDir "Developer/deligoez/dotfiles/dotfiles/home" | quote }}
 
 [data]
   phpVersion = {{ $phpVersion | quote }}

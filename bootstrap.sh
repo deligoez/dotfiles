@@ -26,7 +26,7 @@ if [[ ! -t 0 ]]; then
     exec zsh "$TMPFILE" "$@" </dev/tty
 fi
 
-DOTFILES_DIR="$HOME/Developer/github/deligoez/dotfiles"
+DOTFILES_DIR="$HOME/Developer/deligoez/dotfiles/dotfiles"
 DOTFILES_REPO="https://github.com/deligoez/dotfiles.git"
 
 echo "🚀 Setting up developer workstation..."
