@@ -71,17 +71,17 @@
   ansible.builtin.include_tasks: shell.yml
   tags: [shell]
 
-# ── Config files via chezmoi (after packages are installed) ──
-
-- name: Apply dotfile configs
-  ansible.builtin.include_tasks: chezmoi.yml
-  tags: [chezmoi]
-
-# ── SSH keys (after chezmoi deploys ~/.ssh/config) ──
+# ── SSH keys (before chezmoi — needed to clone private repo) ──
 
 - name: Setup SSH keys
   ansible.builtin.include_tasks: ssh.yml
   tags: [ssh]
+
+# ── Config files via chezmoi (after SSH for private repo access) ──
+
+- name: Apply dotfile configs
+  ansible.builtin.include_tasks: chezmoi.yml
+  tags: [chezmoi]
 
 # ── Composer global packages (after PHP is installed) ──
 
