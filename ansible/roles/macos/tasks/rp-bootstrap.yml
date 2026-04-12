@@ -8,7 +8,14 @@
   ansible.builtin.command: /opt/homebrew/bin/rp bootstrap
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: rp_result
   when: rp_manifest.stat.exists
+  changed_when: rp_result.stdout | default('') | length > 0
+
+- name: Show rp bootstrap output
+  ansible.builtin.debug:
+    msg: "{{ rp_result.stdout_lines }}"
+  when: rp_manifest.stat.exists and rp_result.stdout_lines | default([]) | length > 0
 
 - name: Warn if rp manifest missing
   ansible.builtin.debug:
