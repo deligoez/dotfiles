@@ -7,6 +7,16 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "auto_install_extensions": {
+    "blade": true,
+    "catppuccin-icons": true,
+    "git-firefly": true,
+    "html": true,
+    "jetbrains-themes": true,
+    "macos-classic": true,
+    "php": true,
+    "plantuml": true
+  },
   "semantic_tokens": "off",
   "buffer_font_weight": 450.0,
   "diff_view_style": "unified",
