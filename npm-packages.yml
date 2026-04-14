@@ -1,0 +1,5 @@
+---
+# Global npm packages
+# Add new packages here — Ansible picks them up automatically
+npm_packages:
+  - intelephense

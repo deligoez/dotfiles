@@ -89,6 +89,12 @@
   ansible.builtin.include_tasks: composer-packages.yml
   tags: [composer]
 
+# ── npm global packages (after Node is installed) ──
+
+- name: Install global npm packages
+  ansible.builtin.include_tasks: npm-packages.yml
+  tags: [npm]
+
 # ── Repo bootstrap (after SSH keys for private repo access) ──
 
 - name: Bootstrap repos with rp

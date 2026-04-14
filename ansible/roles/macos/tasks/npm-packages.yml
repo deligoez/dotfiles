@@ -1,0 +1,19 @@
+---
+- name: Load npm packages list
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../npm-packages.yml"
+
+- name: Get installed global npm packages
+  ansible.builtin.command: /opt/homebrew/bin/npm list -g --depth=0 --parseable
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: npm_installed
+  changed_when: false
+
+- name: Install missing global npm packages
+  ansible.builtin.command: /opt/homebrew/bin/npm install -g {{ item }}
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  loop: "{{ npm_packages }}"
+  when: "'/' ~ item not in npm_installed.stdout"
+  changed_when: true
