@@ -19,17 +19,22 @@
          | list }}
   when: skill_lock.stat.exists
 
+- name: Check if skills directory exists
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.agents/skills"
+  register: skills_dir
+
 - name: Get installed skill directories
   ansible.builtin.find:
     paths: "{{ ansible_facts.env.HOME }}/.agents/skills"
     file_type: directory
     depth: 1
   register: installed_skills
-  when: skill_lock.stat.exists
+  when: skill_lock.stat.exists and skills_dir.stat.exists and skills_dir.stat.isdir
 
 - name: Build installed skills name set
   ansible.builtin.set_fact:
-    installed_skill_names: "{{ installed_skills.files | map(attribute='path') | map('basename') | list }}"
+    installed_skill_names: "{{ (installed_skills.files | default([])) | map(attribute='path') | map('basename') | list }}"
   when: skill_lock.stat.exists
 
 - name: Compute missing skills (not yet cloned)
