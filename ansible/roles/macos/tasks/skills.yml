@@ -4,15 +4,48 @@
     path: "{{ ansible_facts.env.HOME }}/.agents/.skill-lock.json"
   register: skill_lock
 
-- name: Install skills from skill-lock.json
-  ansible.builtin.command: /opt/homebrew/bin/npx -y skills experimental_install -g
+- name: Read skill-lock.json
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts.env.HOME }}/.agents/.skill-lock.json"
+  register: skill_lock_content
+  when: skill_lock.stat.exists
+
+- name: Parse desired skills from lock file
+  ansible.builtin.set_fact:
+    desired_skills: >-
+      {{ (skill_lock_content.content | b64decode | from_json).skills
+         | dict2items
+         | map(attribute='value.sourceUrl')
+         | list }}
+  when: skill_lock.stat.exists
+
+- name: Get installed skill directories
+  ansible.builtin.find:
+    paths: "{{ ansible_facts.env.HOME }}/.agents/skills"
+    file_type: directory
+    depth: 1
+  register: installed_skills
+  when: skill_lock.stat.exists
+
+- name: Build installed skills name set
+  ansible.builtin.set_fact:
+    installed_skill_names: "{{ installed_skills.files | map(attribute='path') | map('basename') | list }}"
+  when: skill_lock.stat.exists
+
+- name: Compute missing skills (not yet cloned)
+  ansible.builtin.set_fact:
+    missing_skills: >-
+      {{ (skill_lock_content.content | b64decode | from_json).skills
+         | dict2items
+         | rejectattr('key', 'in', installed_skill_names)
+         | map(attribute='value.sourceUrl')
+         | list }}
+  when: skill_lock.stat.exists
+
+- name: Install missing skills via npx
+  ansible.builtin.command: /opt/homebrew/bin/npx -y skills add -g -y {{ item }}
   environment:
     PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
-  register: skills_install
-  when: skill_lock.stat.exists
-  changed_when: "'installed' in skills_install.stdout | default('')"
-
-- name: Show skills install output
-  ansible.builtin.debug:
-    msg: "{{ skills_install.stdout_lines }}"
-  when: skill_lock.stat.exists and skills_install.stdout_lines | default([]) | length > 0
+  loop: "{{ missing_skills | default([]) }}"
+  when: skill_lock.stat.exists and (missing_skills | default([])) | length > 0
+  changed_when: true
