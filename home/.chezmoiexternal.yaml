@@ -4,3 +4,9 @@
   type: git-repo
   url: git@github.com:deligoez/dotfiles-private.git
   refreshPeriod: 24h
+
+# Clone theme repo (public). Symlinks point to theme files in this cache.
+.local/share/deligoez-theme:
+  type: git-repo
+  url: https://github.com/deligoez/deligoez-theme.git
+  refreshPeriod: 168h
