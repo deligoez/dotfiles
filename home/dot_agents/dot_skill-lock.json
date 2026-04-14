@@ -1,0 +1,68 @@
+{
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "antigravity",
+    "cline",
+    "codex",
+    "cursor",
+    "deepagents",
+    "firebender",
+    "gemini-cli",
+    "github-copilot",
+    "kimi-cli",
+    "opencode",
+    "warp",
+    "claude-code"
+  ],
+  "skills": {
+    "doctest": {
+      "installedAt": "2026-02-26T14:36:00.570Z",
+      "skillFolderHash": "341b378300e0ade9c470713d50b0de43cea1fb0f",
+      "skillPath": "doctest/skills/doctest/SKILL.md",
+      "source": "testflowlabs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/testflowlabs/skills.git",
+      "updatedAt": "2026-02-26T14:36:00.570Z"
+    },
+    "find-skills": {
+      "installedAt": "2026-02-12T13:36:26.002Z",
+      "skillFolderHash": "3013fdeb8a11b10b1eb795ec3ae8bfca38f7c26d",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "updatedAt": "2026-03-17T10:17:45.617Z"
+    },
+    "humanizer": {
+      "source": "blader/humanizer",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/blader/humanizer.git",
+      "skillPath": "SKILL.md",
+      "skillFolderHash": "8b3a17889fbf12bedae20974a3c9f9de746ed754",
+      "installedAt": "2026-03-09T07:50:11.775Z",
+      "updatedAt": "2026-04-01T14:02:47.672Z"
+    },
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/agent-browser.git",
+      "skillPath": "skills/agent-browser/SKILL.md",
+      "skillFolderHash": "b6f762bf402cdfaf6a06514e9ce4142ce3e4fb4c",
+      "installedAt": "2026-03-23T14:28:19.970Z",
+      "updatedAt": "2026-04-10T04:10:31.425Z"
+    },
+    "tp": {
+      "source": "deligoez/tp",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/deligoez/tp.git",
+      "skillPath": "skills/tp/SKILL.md",
+      "skillFolderHash": "6639aaa620880fbbb23c3130d8c1ce29ede5094e",
+      "installedAt": "2026-04-01T13:18:55.205Z",
+      "updatedAt": "2026-04-10T04:10:34.370Z"
+    }
+  },
+  "version": 3
+}

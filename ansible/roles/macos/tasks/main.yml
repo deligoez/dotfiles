@@ -95,6 +95,12 @@
   ansible.builtin.include_tasks: npm-packages.yml
   tags: [npm]
 
+# ── Agent skills (after chezmoi deploys skill-lock.json) ──
+
+- name: Install agent skills
+  ansible.builtin.include_tasks: skills.yml
+  tags: [skills]
+
 # ── Repo bootstrap (after SSH keys for private repo access) ──
 
 - name: Bootstrap repos with rp

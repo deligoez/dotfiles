@@ -1,0 +1,18 @@
+---
+- name: Check if skill-lock.json exists
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/.agents/.skill-lock.json"
+  register: skill_lock
+
+- name: Install skills from skill-lock.json
+  ansible.builtin.command: /opt/homebrew/bin/npx -y skills experimental_install -g
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/homebrew/sbin:{{ ansible_facts.env.PATH }}"
+  register: skills_install
+  when: skill_lock.stat.exists
+  changed_when: "'installed' in skills_install.stdout | default('')"
+
+- name: Show skills install output
+  ansible.builtin.debug:
+    msg: "{{ skills_install.stdout_lines }}"
+  when: skill_lock.stat.exists and skills_install.stdout_lines | default([]) | length > 0
