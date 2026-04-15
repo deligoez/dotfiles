@@ -80,7 +80,10 @@
 # ── Config files via chezmoi (after SSH for private repo access) ──
 
 - name: Apply dotfile configs
-  ansible.builtin.include_tasks: chezmoi.yml
+  ansible.builtin.include_tasks:
+    file: chezmoi.yml
+    apply:
+      tags: [chezmoi]
   tags: [chezmoi]
 
 # ── Codegraff / muonry (after chezmoi for credentials symlink) ──
