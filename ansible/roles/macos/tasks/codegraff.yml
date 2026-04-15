@@ -1,0 +1,15 @@
+---
+# Install codegraff (muonry daemon + zigread/zigrep/zigpatch/zigcreate CLIs)
+# License credentials are deployed separately via chezmoi:
+#   ~/.codegraff/credentials.json -> ~/.local/share/dotfiles-private/codegraff/credentials.json
+
+- name: Check if muonry is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/bin/muonry"
+  register: muonry_binary
+
+- name: Install codegraff (muonry)
+  ansible.builtin.shell: curl -fsSL https://codegraff.com/install.sh | sh
+  args:
+    creates: "{{ ansible_facts.env.HOME }}/bin/muonry"
+  when: not muonry_binary.stat.exists

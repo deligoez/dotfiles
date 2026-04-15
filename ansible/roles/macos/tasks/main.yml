@@ -83,6 +83,12 @@
   ansible.builtin.include_tasks: chezmoi.yml
   tags: [chezmoi]
 
+# ── Codegraff / muonry (after chezmoi for credentials symlink) ──
+
+- name: Install codegraff
+  ansible.builtin.include_tasks: codegraff.yml
+  tags: [codegraff]
+
 # ── Composer global packages (after PHP is installed) ──
 
 - name: Install Composer global packages
