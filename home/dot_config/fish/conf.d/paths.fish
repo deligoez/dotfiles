@@ -16,3 +16,6 @@ fish_add_path ~/.cargo/bin
 
 # pipx / uv
 fish_add_path ~/.local/bin
+
+# Codegraff (muonry + zig* CLIs)
+fish_add_path ~/bin
