@@ -26,55 +26,88 @@
 # ── macOS settings first (fast, no dependencies) ──
 
 - name: Apply locale settings
-  ansible.builtin.include_tasks: locale.yml
+  ansible.builtin.include_tasks:
+    file: locale.yml
+    apply:
+      tags: [locale, macos-defaults]
   tags: [locale, macos-defaults]
 
 - name: Apply desktop settings
-  ansible.builtin.include_tasks: desktop.yml
+  ansible.builtin.include_tasks:
+    file: desktop.yml
+    apply:
+      tags: [desktop, macos-defaults]
   tags: [desktop, macos-defaults]
 
 - name: Apply menu bar settings
-  ansible.builtin.include_tasks: menubar.yml
+  ansible.builtin.include_tasks:
+    file: menubar.yml
+    apply:
+      tags: [menubar, macos-defaults]
   tags: [menubar, macos-defaults]
 
 - name: Apply input settings
-  ansible.builtin.include_tasks: input.yml
+  ansible.builtin.include_tasks:
+    file: input.yml
+    apply:
+      tags: [input, macos-defaults]
   tags: [input, macos-defaults]
 
 - name: Apply finder settings
-  ansible.builtin.include_tasks: finder.yml
+  ansible.builtin.include_tasks:
+    file: finder.yml
+    apply:
+      tags: [finder, macos-defaults]
   tags: [finder, macos-defaults]
 
 - name: Apply dock settings
-  ansible.builtin.include_tasks: dock.yml
+  ansible.builtin.include_tasks:
+    file: dock.yml
+    apply:
+      tags: [dock, macos-defaults]
   tags: [dock, macos-defaults]
 
 - name: Apply app settings
-  ansible.builtin.include_tasks: apps.yml
+  ansible.builtin.include_tasks:
+    file: apps.yml
+    apply:
+      tags: [apps, macos-defaults]
   tags: [apps, macos-defaults]
 
 # ── Homebrew packages last (slow, may have failures) ──
 
 - name: Install Homebrew packages
-  ansible.builtin.include_tasks: homebrew.yml
+  ansible.builtin.include_tasks:
+    file: homebrew.yml
+    apply:
+      tags: [homebrew]
   tags: [homebrew]
 
 # ── Default apps (after packages are installed) ──
 
 - name: Set default applications
-  ansible.builtin.include_tasks: defaults.yml
+  ansible.builtin.include_tasks:
+    file: defaults.yml
+    apply:
+      tags: [defaults]
   tags: [defaults]
 
 # ── Shell setup (after fish is installed) ──
 
 - name: Set default shell
-  ansible.builtin.include_tasks: shell.yml
+  ansible.builtin.include_tasks:
+    file: shell.yml
+    apply:
+      tags: [shell]
   tags: [shell]
 
 # ── SSH keys (before chezmoi — needed to clone private repo) ──
 
 - name: Setup SSH keys
-  ansible.builtin.include_tasks: ssh.yml
+  ansible.builtin.include_tasks:
+    file: ssh.yml
+    apply:
+      tags: [ssh]
   tags: [ssh]
 
 # ── Config files via chezmoi (after SSH for private repo access) ──
@@ -98,23 +131,35 @@
 # ── Composer global packages (after PHP is installed) ──
 
 - name: Install Composer global packages
-  ansible.builtin.include_tasks: composer-packages.yml
+  ansible.builtin.include_tasks:
+    file: composer-packages.yml
+    apply:
+      tags: [composer]
   tags: [composer]
 
 # ── npm global packages (after Node is installed) ──
 
 - name: Install global npm packages
-  ansible.builtin.include_tasks: npm-packages.yml
+  ansible.builtin.include_tasks:
+    file: npm-packages.yml
+    apply:
+      tags: [npm]
   tags: [npm]
 
 # ── Agent skills (after chezmoi deploys skill-lock.json) ──
 
 - name: Install agent skills
-  ansible.builtin.include_tasks: skills.yml
+  ansible.builtin.include_tasks:
+    file: skills.yml
+    apply:
+      tags: [skills]
   tags: [skills]
 
 # ── Repo bootstrap (after SSH keys for private repo access) ──
 
 - name: Bootstrap repos with rp
-  ansible.builtin.include_tasks: rp-bootstrap.yml
+  ansible.builtin.include_tasks:
+    file: rp-bootstrap.yml
+    apply:
+      tags: [rp]
   tags: [rp]
