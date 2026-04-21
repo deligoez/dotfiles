@@ -326,6 +326,7 @@
       - openvpn-connect
       - adguard
       - parallels@20
+      - karabiner-elements
 
 - name: Install missing Homebrew casks
   community.general.homebrew_cask:
