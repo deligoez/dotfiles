@@ -52,6 +52,7 @@
       - 4ier/tap
       - ankitpokhrel/jira-cli
       - crossoverjie/skilldeck
+      - yqrashawn/goku
 
 - name: Define desired formulae
   ansible.builtin.set_fact:
@@ -147,6 +148,8 @@
       # Third-Party CLI
       - 4ier/tap/notion-cli
       - ankitpokhrel/jira-cli/jira-cli
+      # Keyboard
+      - yqrashawn/goku/goku
 
 - name: Define desired casks
   ansible.builtin.set_fact:

@@ -1,0 +1,26 @@
+;; ~/.config/karabiner.edn
+;; Goku derleyicisi bu dosyayı ~/.config/karabiner/karabiner.json'a çevirir.
+;;
+;; Derleme: `goku` (tek seferlik)  |  `goku -w` (watch mode)
+;; Karabiner-Elements otomatik olarak karabiner.json değişikliklerini izler.
+;;
+;; Modifier kısaltmaları: !C = cmd, !O = option, !S = shift, !T = control
+;; Kombinasyonlar: !CS = cmd+shift, !CO = cmd+option, vb.
+
+{:profiles
+ {:Default {:default true
+            :sim     50   ;; simultaneous key threshold (ms)
+            :delay   500
+            :alone   200  ;; tap threshold
+            :held    500}}
+
+ ;; Layer tanımları
+ :layers {:nav {:key :caps_lock :alone {:key :escape}}}
+
+ :main
+ [{:des   "NAV layer — Caps hold → HJKL oklar"
+   :rules [:nav
+           [:h :left_arrow]
+           [:j :down_arrow]
+           [:k :up_arrow]
+           [:l :right_arrow]]}]}

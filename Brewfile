@@ -149,6 +149,8 @@ tap "ankitpokhrel/jira-cli"
 brew "ankitpokhrel/jira-cli/jira-cli"               # Jira CLI client
 # ── Keyboard ──
 cask "karabiner-elements"                            # Keyboard remapper (layers, tap-hold, complex modifications)
+tap "yqrashawn/goku"
+brew "yqrashawn/goku/goku"                           # EDN DSL → karabiner.json compiler
 
 # ── Productivity Apps ──
 cask "1password"                                    # Password manager
