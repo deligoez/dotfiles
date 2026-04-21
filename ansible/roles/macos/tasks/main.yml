@@ -101,6 +101,15 @@
       tags: [shell]
   tags: [shell]
 
+# ── Kanata (after kanata binary + karabiner-elements cask are installed) ──
+
+- name: Setup Kanata keyboard remapper
+  ansible.builtin.include_tasks:
+    file: kanata.yml
+    apply:
+      tags: [kanata]
+  tags: [kanata]
+
 # ── SSH keys (before chezmoi — needed to clone private repo) ──
 
 - name: Setup SSH keys
