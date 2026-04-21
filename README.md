@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal workstation setup for macOS (and eventually Omarchy/Arch Linux), powered by **Ansible** + **Chezmoi**.
+Personal workstation setup for macOS, powered by **Ansible** + **Chezmoi**.
 
 Idempotent — safe to run multiple times.
 
@@ -62,7 +62,7 @@ home/                     Chezmoi-managed dotfiles
 └── dot_ssh/                SSH config
 ansible/
 ├── site.yml              Main playbook
-├── inventory.yml         Host groups (macos / omarchy)
+├── inventory.yml         macOS host
 ├── requirements.yml      Galaxy collections
 └── roles/macos/tasks/
     ├── main.yml          Task orchestrator

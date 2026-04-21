@@ -30,7 +30,7 @@ config.yml            # User config (hostname, timezone, region, languages, keyb
 Brewfile              # All Homebrew packages (~186 items)
 ansible/
   site.yml            # Master playbook, loads config.yml
-  inventory.yml       # Host groups (macos / omarchy)
+  inventory.yml       # macOS host
   roles/macos/tasks/  # Modular tagged tasks:
     main.yml          #   Orchestrator
     homebrew.yml      #   brew bundle
@@ -101,7 +101,3 @@ Ghostty emits a macOS beep on `Cmd+Ctrl+Arrow` for split resize because macOS do
 
 Ref: https://github.com/ghostty-org/ghostty/discussions/5521
 
-### Platform Support
-
-- macOS: Active (Darwin role)
-- Omarchy (Arch Linux): Inventory ready, role not yet implemented

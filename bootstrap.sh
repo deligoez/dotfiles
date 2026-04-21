@@ -38,22 +38,19 @@ SUDO_KEEPALIVE_PID=$!
 trap 'kill $SUDO_KEEPALIVE_PID 2>/dev/null' EXIT
 
 # ── Detect platform ──
-if [[ "$OSTYPE" == darwin* ]]; then
-    OS="macos"
-elif [[ -f /etc/arch-release ]]; then
-    OS="omarchy"
-else
-    echo "❌ Unsupported platform: $OSTYPE"
+if [[ "$OSTYPE" != darwin* ]]; then
+    echo "❌ Unsupported platform: $OSTYPE (macOS only)"
     exit 1
 fi
+OS="macos"
 echo "📋 Platform: $OS"
 
-# ── Step 1: Homebrew (macOS only — installs Xcode CLT automatically) ──
-if [[ "$OS" == "macos" ]] && [[ ! -x /opt/homebrew/bin/brew ]]; then
+# ── Step 1: Homebrew (installs Xcode CLT automatically) ──
+if [[ ! -x /opt/homebrew/bin/brew ]]; then
     echo "📦 Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
-[[ "$OS" == "macos" ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # ── Step 2: pipx + Ansible ──
 export PATH="$HOME/.local/bin:$PATH"
