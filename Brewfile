@@ -147,6 +147,10 @@ brew "4ier/tap/notion-cli"                          # Notion CLI client
 
 tap "ankitpokhrel/jira-cli"
 brew "ankitpokhrel/jira-cli/jira-cli"               # Jira CLI client
+# ── Keyboard ──
+brew "kanata"                                        # Programmable keyboard remapper (layers, tap-hold)
+cask "karabiner-elements"                            # Required for Kanata's VirtualHIDDevice driver
+
 # ── Productivity Apps ──
 cask "1password"                                    # Password manager
 cask "adguard"                                      # Ad blocker
