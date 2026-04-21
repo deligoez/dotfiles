@@ -6,12 +6,12 @@
 
 - name: Check if karabiner.json exists
   ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+    path: "{{ ansible_facts.env.HOME }}/.config/karabiner/karabiner.json"
   register: karabiner_json
 
 - name: Read profile names from karabiner.json
   ansible.builtin.shell: |
-    /opt/homebrew/bin/jq -r '.profiles[].name' "{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+    /opt/homebrew/bin/jq -r '.profiles[].name' "{{ ansible_facts.env.HOME }}/.config/karabiner/karabiner.json"
   register: karabiner_profiles
   changed_when: false
   when: karabiner_json.stat.exists
@@ -19,7 +19,7 @@
 - name: Rename "Default profile" to "Default" in karabiner.json
   ansible.builtin.shell: |
     set -euo pipefail
-    KJSON="{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+    KJSON="{{ ansible_facts.env.HOME }}/.config/karabiner/karabiner.json"
     /opt/homebrew/bin/jq '(.profiles[] | select(.name == "Default profile") | .name) = "Default"' "$KJSON" > "$KJSON.tmp"
     mv "$KJSON.tmp" "$KJSON"
   when:
@@ -29,6 +29,6 @@
 - name: Compile karabiner.edn with goku
   ansible.builtin.command: /opt/homebrew/bin/goku
   environment:
-    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
+    PATH: "/opt/homebrew/bin:{{ ansible_facts.env.PATH }}"
   register: goku_result
   changed_when: "'Done!' in goku_result.stdout or 'Done!' in goku_result.stderr"
