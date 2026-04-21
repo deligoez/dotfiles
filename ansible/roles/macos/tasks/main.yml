@@ -119,6 +119,15 @@
       tags: [chezmoi]
   tags: [chezmoi]
 
+# ── Karabiner-Elements (after chezmoi deploys karabiner.edn + seed karabiner.json) ──
+
+- name: Compile Karabiner config with Goku
+  ansible.builtin.include_tasks:
+    file: karabiner.yml
+    apply:
+      tags: [karabiner]
+  tags: [karabiner]
+
 # ── Codegraff / muonry (after chezmoi for credentials symlink) ──
 
 - name: Install codegraff

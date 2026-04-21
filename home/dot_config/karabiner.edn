@@ -13,7 +13,6 @@
             :delay   500
             :alone   200  ;; tap threshold
             :held    500}}
-
  ;; Layer tanımları
  :layers {:nav {:key :caps_lock :alone {:key :escape}}}
 

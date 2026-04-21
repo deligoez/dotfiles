@@ -1,0 +1,34 @@
+---
+# Karabiner-Elements post-install:
+#   1. Ensure the active profile is named "Default" (Goku EDN expects this)
+#   2. Compile karabiner.edn → karabiner.json via Goku
+# Assumes goku is installed (homebrew tag) and karabiner.edn is deployed (chezmoi tag).
+
+- name: Check if karabiner.json exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+  register: karabiner_json
+
+- name: Read profile names from karabiner.json
+  ansible.builtin.shell: |
+    /opt/homebrew/bin/jq -r '.profiles[].name' "{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+  register: karabiner_profiles
+  changed_when: false
+  when: karabiner_json.stat.exists
+
+- name: Rename "Default profile" to "Default" in karabiner.json
+  ansible.builtin.shell: |
+    set -euo pipefail
+    KJSON="{{ ansible_env.HOME }}/.config/karabiner/karabiner.json"
+    /opt/homebrew/bin/jq '(.profiles[] | select(.name == "Default profile") | .name) = "Default"' "$KJSON" > "$KJSON.tmp"
+    mv "$KJSON.tmp" "$KJSON"
+  when:
+    - karabiner_json.stat.exists
+    - '"Default profile" in (karabiner_profiles.stdout | default(""))'
+
+- name: Compile karabiner.edn with goku
+  ansible.builtin.command: /opt/homebrew/bin/goku
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
+  register: goku_result
+  changed_when: "'Done!' in goku_result.stdout or 'Done!' in goku_result.stderr"
