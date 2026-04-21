@@ -13,11 +13,19 @@
             :delay   500
             :alone   200  ;; tap threshold
             :held    500}}
- ;; Layer tanımları
+ ;; Layer tanımları: Caps tap=Esc, hold=NAV
  :layers {:nav {:key :caps_lock :alone {:key :escape}}}
 
  :main
- [{:des   "NAV layer — Caps hold"
+ [;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
+  ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.
+  {:des "Shift+Caps → NAV layer trigger"
+   :rules [[:!Scaps_lock
+            [["nav" 1]]
+            nil
+            {:afterup [["nav" 0]]}]]}
+
+  {:des "NAV layer — Caps hold"
    :rules [:nav
            ;; ── Hareket ──
            ;; Oklar (HJKL)
