@@ -17,9 +17,22 @@
  :layers {:nav {:key :caps_lock :alone {:key :escape}}}
 
  :main
- [{:des   "NAV layer — Caps hold → HJKL oklar"
+ [{:des   "NAV layer — Caps hold"
    :rules [:nav
+           ;; Oklar (HJKL)
            [:h :left_arrow]
            [:j :down_arrow]
            [:k :up_arrow]
-           [:l :right_arrow]]}]}
+           [:l :right_arrow]
+
+           ;; Kelime navigasyonu (Opt+Arrow)
+           [:w [:!Oright_arrow]]    ;; word forward
+           [:b [:!Oleft_arrow]]     ;; word backward
+
+           ;; Satır navigasyonu (Cmd+Arrow)
+           [:a [:!Cleft_arrow]]     ;; line start
+           [:e [:!Cright_arrow]]    ;; line end
+
+           ;; Döküman navigasyonu (Cmd+Up/Down)
+           [:u [:!Cup_arrow]]       ;; document start
+           [:d [:!Cdown_arrow]]]}]} ;; document end
