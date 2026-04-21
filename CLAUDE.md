@@ -18,7 +18,7 @@ HJKL-first, vim-style, layered keybinding system with a modern macOS developer s
 | Terminal | iTerm2 | Ghostty |
 | Prompt | ? | Starship |
 | Multiplexer | tmux | Zellij |
-| Keyboard | Karabiner + Superkey | Kanata (+ Superkey for Seek only) |
+| Keyboard | Karabiner + Superkey | Karabiner-Elements (+ Superkey for Seek only) |
 | Window Manager | Moom + Raycast | Rift |
 | Editor | - | Neovim + PHPStorm/IdeaVim |
 
@@ -67,7 +67,7 @@ docs/                 # Setup guide, screenshots, recordings (gitignored)
 - [ ] Starship
 
 ### Phase 3: Keyboard & Window Management
-- [ ] Kanata (NAV + WINDOW layers)
+- [ ] Karabiner-Elements config (NAV + WINDOW layers)
 - [ ] Rift
 - [ ] Superkey (Seek only)
 
