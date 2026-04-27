@@ -6,6 +6,11 @@
 ;;
 ;; Modifier kısaltmaları: !C = cmd, !O = option, !S = shift, !T = control
 ;; Kombinasyonlar: !CS = cmd+shift, !CO = cmd+option, vb.
+;;
+;; Mimari:
+;;   Caps Lock tap=Esc / hold=NAV layer (text navigation)
+;;   Spacebar  tap=Space / hold=WINDOW layer (calls aerospace CLI)
+;; Tek source-of-truth: bu dosya. AeroSpace TOML'ında binding yok.
 
 {:profiles
  {:Default {:default true
@@ -13,17 +18,35 @@
             :delay   500
             :alone   200  ;; tap threshold
             :held    500}}
- ;; Layer tanımları: Caps tap=Esc, hold=NAV
- :layers {:nav {:key :caps_lock :alone {:key :escape}}}
+
+ ;; Layer tanımları
+ :layers {:nav    {:key :caps_lock :alone {:key :escape}}
+          :window {:key :spacebar  :alone {:key :spacebar}}}
 
  :main
- [;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
+ [;; ──────────────────────────────────────────────────────────────────
+  ;; Layer trigger workarounds (shift-pass)
+  ;; ──────────────────────────────────────────────────────────────────
+
+  ;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
   ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.
   {:des "Shift+Caps → NAV layer trigger"
    :rules [[:!Scaps_lock
             [["nav" 1]]
             nil
             {:afterup [["nav" 0]]}]]}
+
+  ;; Shift+Space da WINDOW layer'ı tetiklesin — Shift'li hareketler
+  ;; (move window left, vb.) için gerekli.
+  {:des "Shift+Space → WINDOW layer trigger"
+   :rules [[:!Sspacebar
+            [["window" 1]]
+            nil
+            {:afterup [["window" 0]]}]]}
+
+  ;; ──────────────────────────────────────────────────────────────────
+  ;; NAV layer (Caps hold) — Text navigation & selection
+  ;; ──────────────────────────────────────────────────────────────────
 
   {:des "NAV layer — Caps hold"
    :rules [:nav
@@ -57,4 +80,65 @@
            [:!Se [:!CSright_arrow]]
            ;; Döküman seçimi
            [:!Su [:!CSup_arrow]]
-           [:!Sd [:!CSdown_arrow]]]}]}
+           [:!Sd [:!CSdown_arrow]]]}
+
+  ;; ──────────────────────────────────────────────────────────────────
+  ;; WINDOW layer (Space hold) — AeroSpace CLI
+  ;;
+  ;; Tüm aksiyonlar `aerospace` CLI ile çalışır. AeroSpace TOML'ında
+  ;; keybinding yok; tek source-of-truth burası.
+  ;; ──────────────────────────────────────────────────────────────────
+
+  {:des "WINDOW layer — Space hold (AeroSpace CLI)"
+   :rules [:window
+           ;; ── Focus (HJKL) ──
+           [:h [{:shell_command "/opt/homebrew/bin/aerospace focus left"}]]
+           [:j [{:shell_command "/opt/homebrew/bin/aerospace focus down"}]]
+           [:k [{:shell_command "/opt/homebrew/bin/aerospace focus up"}]]
+           [:l [{:shell_command "/opt/homebrew/bin/aerospace focus right"}]]
+
+           ;; ── Move (Shift+HJKL) ──
+           [:!Sh [{:shell_command "/opt/homebrew/bin/aerospace move left"}]]
+           [:!Sj [{:shell_command "/opt/homebrew/bin/aerospace move down"}]]
+           [:!Sk [{:shell_command "/opt/homebrew/bin/aerospace move up"}]]
+           [:!Sl [{:shell_command "/opt/homebrew/bin/aerospace move right"}]]
+
+           ;; ── Resize (Alt+HJKL) — H/L = width, J/K = height ──
+           [:!Oh [{:shell_command "/opt/homebrew/bin/aerospace resize width -100"}]]
+           [:!Ol [{:shell_command "/opt/homebrew/bin/aerospace resize width +100"}]]
+           [:!Oj [{:shell_command "/opt/homebrew/bin/aerospace resize height +100"}]]
+           [:!Ok [{:shell_command "/opt/homebrew/bin/aerospace resize height -100"}]]
+
+           ;; ── Workspace switch (1-9, 0=10) ──
+           [:1 [{:shell_command "/opt/homebrew/bin/aerospace workspace 1"}]]
+           [:2 [{:shell_command "/opt/homebrew/bin/aerospace workspace 2"}]]
+           [:3 [{:shell_command "/opt/homebrew/bin/aerospace workspace 3"}]]
+           [:4 [{:shell_command "/opt/homebrew/bin/aerospace workspace 4"}]]
+           [:5 [{:shell_command "/opt/homebrew/bin/aerospace workspace 5"}]]
+           [:6 [{:shell_command "/opt/homebrew/bin/aerospace workspace 6"}]]
+           [:7 [{:shell_command "/opt/homebrew/bin/aerospace workspace 7"}]]
+           [:8 [{:shell_command "/opt/homebrew/bin/aerospace workspace 8"}]]
+           [:9 [{:shell_command "/opt/homebrew/bin/aerospace workspace 9"}]]
+           [:0 [{:shell_command "/opt/homebrew/bin/aerospace workspace 10"}]]
+
+           ;; ── Move window to workspace (Shift+1-9, Shift+0=10) ──
+           [:!S1 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 1"}]]
+           [:!S2 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 2"}]]
+           [:!S3 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 3"}]]
+           [:!S4 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 4"}]]
+           [:!S5 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 5"}]]
+           [:!S6 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 6"}]]
+           [:!S7 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 7"}]]
+           [:!S8 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 8"}]]
+           [:!S9 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 9"}]]
+           [:!S0 [{:shell_command "/opt/homebrew/bin/aerospace move-node-to-workspace 10"}]]
+
+           ;; ── Layout / Window ──
+           [:f     [{:shell_command "/opt/homebrew/bin/aerospace fullscreen"}]]
+           [:!Sf   [{:shell_command "/opt/homebrew/bin/aerospace layout floating tiling"}]]  ;; toggle floating
+           [:s     [{:shell_command "/opt/homebrew/bin/aerospace layout tiles horizontal vertical"}]]  ;; toggle split
+           [:q     [{:shell_command "/opt/homebrew/bin/aerospace close"}]]
+
+           ;; ── Misc ──
+           [:tab   [{:shell_command "/opt/homebrew/bin/aerospace workspace-back-and-forth"}]]
+           [:r     [{:shell_command "/opt/homebrew/bin/aerospace reload-config"}]]]}]}
