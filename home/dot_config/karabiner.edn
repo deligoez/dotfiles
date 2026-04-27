@@ -10,6 +10,9 @@
 ;; Mimari:
 ;;   Caps Lock     tap=Esc / hold=NAV layer (text navigation)
 ;;   Right Command hold=WINDOW layer (calls aerospace CLI)
+;;     - RCmd Karabiner'da modifier sayıldığı için doğrudan layer trigger
+;;       olamıyor. Önce :main'deki ilk rule onu f19'a (no-op) remap'liyor;
+;;       sonra :layers f19 üzerinden window'u aktive ediyor.
 ;;   Spacebar      her zaman boşluk
 ;; Tek source-of-truth: bu dosya. AeroSpace TOML'ında binding yok.
 
@@ -21,15 +24,23 @@
             :held    500}}
 
  ;; Layer tanımları — ikisi de tap-hold (typing'de basılmayan tuşlar)
- :layers {:nav    {:key :caps_lock     :alone {:key :escape}}
-          :window {:key :right_command}}
-
+ :layers {:nav    {:key :caps_lock :alone {:key :escape}}
+          :window {:key :f19}}
  :main
  [;; ──────────────────────────────────────────────────────────────────
+  ;; Right Command → F19 remap
+  ;; Karabiner :layers shorthand modifier key'leri trigger olarak kabul
+  ;; etmiyor. RCmd'yi önce no-op bir tuşa (F19) remap'liyoruz; aşağıda
+  ;; :layers F19 üzerinden window layer'ı aktive ediyor.
+  ;; ──────────────────────────────────────────────────────────────────
+
+  {:des "Right Command → F19 (so it can drive WINDOW layer)"
+   :rules [[:right_command :f19]]}
+
+  ;; ──────────────────────────────────────────────────────────────────
   ;; NAV trigger workaround
   ;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
   ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.
-  ;; (WINDOW için aynı şey gerekmiyor — simlayer modifier'ları geçirir.)
   ;; ──────────────────────────────────────────────────────────────────
 
   {:des "Shift+Caps → NAV layer trigger"
