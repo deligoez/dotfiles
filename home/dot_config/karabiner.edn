@@ -10,8 +10,12 @@
 ;; Mimari:
 ;;   Caps Lock     tap=Esc / hold=NAV layer (text navigation)
 ;;   Right Command hold=WINDOW layer (calls aerospace CLI)
+;;     - Right Command Karabiner Complex Modifications'da modifier flag
+;;       olduğu için layer trigger olamıyor. Ansible karabiner.yml'da
+;;       Simple Modifications üzerinden right_command → f19 remap'liyoruz
+;;       (HID seviyesinde, complex'ten önce). Burada layer trigger f19.
 ;;   Spacebar      her zaman boşluk
-;; Tek source-of-truth: bu dosya. AeroSpace TOML'ında binding yok.
+;; Tek source-of-truth: bu dosya + Ansible jq-patch (RCmd→F19 simple mod).
 
 {:profiles
  {:Default {:default true
@@ -21,27 +25,21 @@
             :held    500}}
 
  ;; Layer tanımları
- ;; - NAV: tap-hold via :layers shorthand (caps_lock plain key, çalışıyor)
- ;; - WINDOW: manuel manipulator (right_command modifier key olduğu için
- ;;   :layers shorthand zincirleme kuramıyor; aşağıda :main'de tanımlı)
- :layers {:nav {:key :caps_lock :alone {:key :escape}}}
+ :layers {:nav    {:key :caps_lock :alone {:key :escape}}
+          :window {:key :f19}}
+
  :main
  [;; ──────────────────────────────────────────────────────────────────
-  ;; WINDOW trigger — manual manipulator
-  ;; Goku'nun :layers shorthand'i modifier key'leri (right_command) doğru
-  ;; tetiklemiyor (manipulator zincirlemesi). Aynı Shift+Caps pattern'iyle
-  ;; right_command'ı doğrudan window variable'ına bağlıyoruz: press → 1,
-  ;; release → 0. RCmd OS'a hiç ulaşmaz (Cmd+letter macro'ları kullanmaz
-  ;; olur).
+  ;; NAV trigger workaround
+  ;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
+  ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.
   ;; ──────────────────────────────────────────────────────────────────
 
-  {:des "Right Command → WINDOW layer trigger"
-   :rules [[:right_command
-            [["window" 1]]
+  {:des "Shift+Caps → NAV layer trigger"
+   :rules [[:!Scaps_lock
+            [["nav" 1]]
             nil
-            {:afterup [["window" 0]]}]]}
-
-  ;; ──────────────────────────────────────────────────────────────────
+            {:afterup [["nav" 0]]}]]}
   ;; NAV trigger workaround
   ;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
   ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.

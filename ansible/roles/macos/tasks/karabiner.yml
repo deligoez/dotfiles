@@ -32,3 +32,25 @@
     PATH: "/opt/homebrew/bin:{{ ansible_facts.env.PATH }}"
   register: goku_result
   changed_when: "'Done!' in goku_result.stdout or 'Done!' in goku_result.stderr"
+
+# Simple Modifications run at HID layer, BEFORE Complex Modifications.
+# Goku only generates Complex Modifications, where modifier-as-layer-trigger
+# (right_command) doesn't work because Karabiner emits the modifier flag
+# regardless of the manipulator's `to:`. Patching simple_modifications via
+# jq makes right_command arrive at Complex Modifications as a fresh f19
+# event, which the WINDOW layer trigger can match.
+- name: Patch karabiner.json with right_command → f19 simple modification
+  ansible.builtin.shell: |
+    set -euo pipefail
+    KJSON="{{ ansible_facts.env.HOME }}/.config/karabiner/karabiner.json"
+    /opt/homebrew/bin/jq '
+      .profiles |= map(
+        if .name == "Default" then
+          .simple_modifications = [
+            {"from": {"key_code": "right_command"}, "to": [{"key_code": "f19"}]}
+          ]
+        else . end
+      )
+    ' "$KJSON" > "$KJSON.tmp"
+    mv "$KJSON.tmp" "$KJSON"
+  changed_when: true
