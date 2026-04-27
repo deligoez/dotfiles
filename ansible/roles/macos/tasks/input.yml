@@ -66,16 +66,22 @@
     type: bool
     value: false
 
+- name: Read current KeyRepeat
+  ansible.builtin.shell: defaults read NSGlobalDomain KeyRepeat 2>/dev/null || echo missing
+  register: key_repeat_current
+  changed_when: false
+
+# osx_defaults module fails on type mismatch (some macOS versions store
+# this as float). Write via raw `defaults` to bypass type-checking.
 - name: Set fast key repeat rate
-  community.general.osx_defaults:
-    domain: NSGlobalDomain
-    key: KeyRepeat
-    type: int
-    value: 1
+  ansible.builtin.command: defaults write NSGlobalDomain KeyRepeat -int 1
+  when: (key_repeat_current.stdout | trim) != "1"
+
+- name: Read current InitialKeyRepeat
+  ansible.builtin.shell: defaults read NSGlobalDomain InitialKeyRepeat 2>/dev/null || echo missing
+  register: initial_key_repeat_current
+  changed_when: false
 
 - name: Set short initial key repeat delay
-  community.general.osx_defaults:
-    domain: NSGlobalDomain
-    key: InitialKeyRepeat
-    type: int
-    value: 10
+  ansible.builtin.command: defaults write NSGlobalDomain InitialKeyRepeat -int 10
+  when: (initial_key_repeat_current.stdout | trim) != "10"
