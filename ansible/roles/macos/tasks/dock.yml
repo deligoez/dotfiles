@@ -75,6 +75,29 @@
     value: false
   notify: Restart Dock
 
+# ── Hot Corners (all disabled) ──
+# Corner keys: 0=no action, 2=Mission Control, 3=App Windows, 4=Desktop,
+# 5=Start Screen Saver, 6=Disable Screen Saver, 10=Display Sleep,
+# 11=Launchpad, 12=Notification Center, 13=Lock Screen, 14=Quick Note.
+# Modifier keys: 0=none.
+
+- name: Disable all hot corners
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: "{{ item }}"
+    type: int
+    value: 0
+  loop:
+    - wvous-tl-corner
+    - wvous-tl-modifier
+    - wvous-tr-corner
+    - wvous-tr-modifier
+    - wvous-bl-corner
+    - wvous-bl-modifier
+    - wvous-br-corner
+    - wvous-br-modifier
+  notify: Restart Dock
+
 # Flush handler immediately so Dock restarts before Homebrew starts
 - name: Apply Dock changes now
   ansible.builtin.meta: flush_handlers
