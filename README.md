@@ -37,9 +37,10 @@ Two layers, each triggered by holding a "trigger" key. **Tap** the trigger = its
 normal behavior; **hold** = enters the layer.
 
 ```
+```
 BASE:    Normal typing
-         Caps tap = Esc       |  Caps hold  = NAV layer
-         Space tap = Space    |  Space hold = WINDOW layer
+         Caps tap  = Esc           |  Caps hold = NAV layer
+         RCmd hold = WINDOW layer  |  Space     = always a literal space
 ```
 
 Single source: [`home/dot_config/karabiner.edn`](home/dot_config/karabiner.edn) →
@@ -58,7 +59,7 @@ Movement and selection that works in *any* text field, system-wide.
 
 Add **Shift** for the *select-while-moving* variant (Shift+H/J/K/L = select left/down/up/right, Shift+W = select word, Shift+A = select to line start, etc.).
 
-### WINDOW layer (Space hold) — AeroSpace tiling
+### WINDOW layer (Right Command hold) — AeroSpace tiling
 
 All commands invoke the [`aerospace` CLI](https://nikitabobko.github.io/AeroSpace/commands)
 via Karabiner's `shell_command`. The AeroSpace TOML has zero keybindings —
@@ -189,7 +190,7 @@ Single file edit. Two examples.
 ```clojure
 ;; in :rules [:window ...] block
 [:c [{:shell_command "/opt/homebrew/bin/aerospace flatten-workspace-tree"}]]
-;; Space+C → flatten current workspace's tile tree
+;; RCmd+C → flatten current workspace's tile tree
 ```
 
 Then:

@@ -8,22 +8,21 @@
 ;; Kombinasyonlar: !CS = cmd+shift, !CO = cmd+option, vb.
 ;;
 ;; Mimari:
-;;   Caps Lock tap=Esc / hold=NAV layer (text navigation)
-;;   Spacebar  tap=Space / hold=WINDOW layer (calls aerospace CLI)
+;;   Caps Lock     tap=Esc / hold=NAV layer (text navigation)
+;;   Right Command hold=WINDOW layer (calls aerospace CLI)
+;;   Spacebar      her zaman boşluk
 ;; Tek source-of-truth: bu dosya. AeroSpace TOML'ında binding yok.
 
 {:profiles
  {:Default {:default true
-            :sim     150  ;; simultaneous threshold for simlayer activation
+            :sim     50
             :delay   500
             :alone   200
             :held    500}}
 
- ;; Layer tanımları
- ;; - NAV: tap-hold (Caps typing'de kullanılmadığı için sorun yok)
- ;; - WINDOW: simlayer (Space typing'de yoğun → tap-hold gecikmesi yapardı)
- :layers    {:nav {:key :caps_lock :alone {:key :escape}}}
- :simlayers {:window {:key :spacebar}}
+ ;; Layer tanımları — ikisi de tap-hold (typing'de basılmayan tuşlar)
+ :layers {:nav    {:key :caps_lock     :alone {:key :escape}}
+          :window {:key :right_command}}
 
  :main
  [;; ──────────────────────────────────────────────────────────────────
@@ -78,13 +77,13 @@
            [:!Sd [:!CSdown_arrow]]]}
 
   ;; ──────────────────────────────────────────────────────────────────
-  ;; WINDOW layer (Space hold) — AeroSpace CLI
+  ;; WINDOW layer (Right Cmd hold) — AeroSpace CLI
   ;;
   ;; Tüm aksiyonlar `aerospace` CLI ile çalışır. AeroSpace TOML'ında
   ;; keybinding yok; tek source-of-truth burası.
   ;; ──────────────────────────────────────────────────────────────────
 
-  {:des "WINDOW layer — Space hold (AeroSpace CLI)"
+  {:des "WINDOW layer — Right Cmd hold (AeroSpace CLI)"
    :rules [:window
            ;; ── Focus (HJKL) ──
            [:h [{:shell_command "/opt/homebrew/bin/aerospace focus left"}]]

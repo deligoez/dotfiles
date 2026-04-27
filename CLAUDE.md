@@ -68,7 +68,7 @@ docs/                 # Setup guide, screenshots, recordings (gitignored)
 
 ### Phase 3: Keyboard & Window Management
 - [x] Karabiner-Elements + Goku (NAV layer: Caps hold)
-- [x] AeroSpace + Karabiner WINDOW layer (Space hold → aerospace CLI)
+- [x] AeroSpace + Karabiner WINDOW layer (Right Cmd hold → aerospace CLI)
 - [ ] Superkey (Seek only)
 
 ### Phase 4: Development Environment
@@ -93,16 +93,17 @@ Single source of truth in `karabiner.edn` (Goku → karabiner.json). NAV emits k
 
 ```
 BASE:   Normal typing
-        Caps tap = Esc, Caps hold = NAV
-        Space tap = Space, Space hold = WINDOW
+        Caps tap  = Esc, Caps hold = NAV
+        RCmd hold = WINDOW (Space stays a literal space)
 
 NAV:    Caps hold + key
         HJKL arrows, W/B word, A/E line, U/D doc
         + Shift = selection variants
 
-WIN:    Space hold + key  →  shell_command "aerospace ..."
+WIN:    Right Cmd hold + key  →  shell_command "aerospace ..."
         HJKL focus, Shift+HJKL move, Alt+HJKL resize
         1-9 workspaces, F fullscreen, Q close, etc.
+```
 ```
 
 ### macOS KeyBindings (Beep Sound Fix)
