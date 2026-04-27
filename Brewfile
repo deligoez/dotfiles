@@ -152,6 +152,10 @@ cask "karabiner-elements"                            # Keyboard remapper (layers
 tap "yqrashawn/goku"
 brew "yqrashawn/goku/goku"                           # EDN DSL → karabiner.json compiler
 
+# ── Window Manager ──
+tap "nikitabobko/tap"
+cask "nikitabobko/tap/aerospace"                     # i3-inspired tiling WM with first-class CLI
+
 # ── Productivity Apps ──
 cask "1password"                                    # Password manager
 cask "adguard"                                      # Ad blocker

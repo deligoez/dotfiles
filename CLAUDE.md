@@ -19,7 +19,7 @@ HJKL-first, vim-style, layered keybinding system with a modern macOS developer s
 | Prompt | ? | Starship |
 | Multiplexer | tmux | Zellij |
 | Keyboard | Karabiner + Superkey | Karabiner-Elements (+ Superkey for Seek only) |
-| Window Manager | Moom + Raycast | Rift |
+| Window Manager | Moom + Raycast | AeroSpace |
 | Editor | - | Neovim + PHPStorm/IdeaVim |
 
 ## Architecture
@@ -67,8 +67,8 @@ docs/                 # Setup guide, screenshots, recordings (gitignored)
 - [ ] Starship
 
 ### Phase 3: Keyboard & Window Management
-- [ ] Karabiner-Elements config (NAV + WINDOW layers)
-- [ ] Rift
+- [x] Karabiner-Elements + Goku (NAV layer: Caps hold)
+- [x] AeroSpace + Karabiner WINDOW layer (Space hold → aerospace CLI)
 - [ ] Superkey (Seek only)
 
 ### Phase 4: Development Environment
@@ -89,10 +89,20 @@ docs/                 # Setup guide, screenshots, recordings (gitignored)
 
 ### Keybinding Architecture
 
+Single source of truth in `karabiner.edn` (Goku → karabiner.json). NAV emits keys directly; WINDOW invokes AeroSpace CLI via `shell_command`.
+
 ```
-BASE: Normal typing, Caps Lock = Esc (tap) / NAV (hold)
-NAV:  HJKL arrows, word nav, editing
-WIN:  Space (hold) -> Rift window management
+BASE:   Normal typing
+        Caps tap = Esc, Caps hold = NAV
+        Space tap = Space, Space hold = WINDOW
+
+NAV:    Caps hold + key
+        HJKL arrows, W/B word, A/E line, U/D doc
+        + Shift = selection variants
+
+WIN:    Space hold + key  →  shell_command "aerospace ..."
+        HJKL focus, Shift+HJKL move, Alt+HJKL resize
+        1-9 workspaces, F fullscreen, Q close, etc.
 ```
 
 ### macOS KeyBindings (Beep Sound Fix)

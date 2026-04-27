@@ -53,6 +53,7 @@
       - ankitpokhrel/jira-cli
       - crossoverjie/skilldeck
       - yqrashawn/goku
+      - nikitabobko/tap
 
 - name: Define desired formulae
   ansible.builtin.set_fact:
@@ -190,6 +191,8 @@
       - superkey
       # Keyboard
       - karabiner-elements
+      # Window Manager
+      - nikitabobko/tap/aerospace
       # Utilities
       - balenaetcher
       # Design & 3D
