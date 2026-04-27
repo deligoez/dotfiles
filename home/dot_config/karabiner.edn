@@ -14,35 +14,30 @@
 
 {:profiles
  {:Default {:default true
-            :sim     50   ;; simultaneous key threshold (ms)
+            :sim     150  ;; simultaneous threshold for simlayer activation
             :delay   500
-            :alone   200  ;; tap threshold
+            :alone   200
             :held    500}}
 
  ;; Layer tanımları
- :layers {:nav    {:key :caps_lock :alone {:key :escape}}
-          :window {:key :spacebar  :alone {:key :spacebar}}}
+ ;; - NAV: tap-hold (Caps typing'de kullanılmadığı için sorun yok)
+ ;; - WINDOW: simlayer (Space typing'de yoğun → tap-hold gecikmesi yapardı)
+ :layers    {:nav {:key :caps_lock :alone {:key :escape}}}
+ :simlayers {:window {:key :spacebar}}
 
  :main
  [;; ──────────────────────────────────────────────────────────────────
-  ;; Layer trigger workarounds (shift-pass)
-  ;; ──────────────────────────────────────────────────────────────────
-
+  ;; NAV trigger workaround
   ;; Shift+Caps da NAV layer'ı tetiklesin (yoksa caps_lock OS'a düşüp
   ;; uppercase mode'u açar). Shift mandatory, OS hiç caps_lock görmez.
+  ;; (WINDOW için aynı şey gerekmiyor — simlayer modifier'ları geçirir.)
+  ;; ──────────────────────────────────────────────────────────────────
+
   {:des "Shift+Caps → NAV layer trigger"
    :rules [[:!Scaps_lock
             [["nav" 1]]
             nil
             {:afterup [["nav" 0]]}]]}
-
-  ;; Shift+Space da WINDOW layer'ı tetiklesin — Shift'li hareketler
-  ;; (move window left, vb.) için gerekli.
-  {:des "Shift+Space → WINDOW layer trigger"
-   :rules [[:!Sspacebar
-            [["window" 1]]
-            nil
-            {:afterup [["window" 0]]}]]}
 
   ;; ──────────────────────────────────────────────────────────────────
   ;; NAV layer (Caps hold) — Text navigation & selection

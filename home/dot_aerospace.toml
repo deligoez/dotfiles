@@ -6,7 +6,6 @@
 # Docs: https://nikitabobko.github.io/AeroSpace/guide
 
 start-at-login = true
-auto-reload-config = true
 
 # Default tile orientation: AeroSpace decides based on container shape.
 default-root-container-layout = 'tiles'
