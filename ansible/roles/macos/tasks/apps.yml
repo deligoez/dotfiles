@@ -22,9 +22,22 @@
     value: 4
 
 # ── Safari ──
+# Safari is sandboxed; writing to com.apple.Safari requires Full Disk
+# Access for the calling shell, which we can't grant from Ansible.
+# Treat the failure as non-fatal so the rest of the playbook continues.
 - name: "Safari: Show features for web developers"
   community.general.osx_defaults:
     domain: com.apple.Safari
     key: com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled
     type: bool
     value: true
+  failed_when: false
+  register: safari_devtools
+
+- name: Remind about Safari Full Disk Access
+  ansible.builtin.debug:
+    msg: >-
+      ⚠️  Safari developer features couldn't be set automatically (sandbox).
+      Either enable Develop menu manually (Safari → Settings → Advanced),
+      or grant Terminal Full Disk Access and re-run.
+  when: safari_devtools is failed
