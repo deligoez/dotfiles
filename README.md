@@ -52,10 +52,10 @@ Movement and selection that works in *any* text field, system-wide.
 
 | Key            | Action                  | Underlying shortcut |
 |----------------|-------------------------|---------------------|
-| `H` / `J` / `K` / `L`   | ← / ↓ / ↑ / →           | Arrow keys |
-| `B` / `W`      | word backward / forward | Opt+←  / Opt+→ |
-| `A` / `E`      | line start / end        | Cmd+←  / Cmd+→ |
-| `U` / `D`      | doc start / end         | Cmd+↑  / Cmd+↓ |
+| H / J / K / L  | ← / ↓ / ↑ / →           | Arrow keys          |
+| B / W          | word backward / forward | Opt+← / Opt+→       |
+| A / E          | line start / end        | Cmd+← / Cmd+→       |
+| U / D          | doc start / end         | Cmd+↑ / Cmd+↓       |
 
 Add **Shift** for the *select-while-moving* variant (Shift+H/J/K/L = select left/down/up/right, Shift+W = select word, Shift+A = select to line start, etc.).
 
@@ -65,20 +65,20 @@ All commands invoke the [`aerospace` CLI](https://nikitabobko.github.io/AeroSpac
 via Karabiner's `shell_command`. The AeroSpace TOML has zero keybindings —
 `karabiner.edn` is the only place to add new ones.
 
-| Key                        | Action |
-|----------------------------|--------|
-| `H` / `J` / `K` / `L`              | focus left / down / up / right (crosses monitors) |
-| `Shift` + `H` / `J` / `K` / `L`    | move window left / down / up / right |
-| `Alt` + `H` / `L`                  | resize width −/+ 100px |
-| `Alt` + `J` / `K`                  | resize height +/− 100px |
-| `1`–`9`, `0`                       | switch to workspace 1-10 |
-| `Shift` + `1`–`9`, `Shift` + `0`   | move window to workspace 1-10 |
-| `F`                        | fullscreen toggle |
-| `Shift` + `F`              | floating ↔ tiling toggle |
-| `S`                        | split orientation toggle (horizontal/vertical) |
-| `Q`                        | close window |
-| `Tab`                      | last focused workspace |
-| `R`                        | reload AeroSpace config |
+| Key                       | Action                                            |
+|---------------------------|---------------------------------------------------|
+| H / J / K / L             | focus left / down / up / right (crosses monitors) |
+| Shift + H / J / K / L     | move window left / down / up / right              |
+| Alt + H / L               | resize width −/+ 100px                            |
+| Alt + J / K               | resize height +/− 100px                           |
+| 1–9, 0                    | switch to workspace 1–10                          |
+| Shift + 1–9, Shift + 0    | move window to workspace 1–10                     |
+| F                         | fullscreen toggle                                 |
+| Shift + F                 | floating ↔ tiling toggle                          |
+| S                         | split orientation toggle (horizontal/vertical)    |
+| Q                         | close window                                      |
+| Tab                       | last focused workspace                            |
+| R                         | reload AeroSpace config                           |
 
 ## Architecture
 
