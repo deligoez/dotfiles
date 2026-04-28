@@ -5,7 +5,9 @@ fish_add_path /opt/homebrew/sbin
 # GNU coreutils (prefer over macOS defaults)
 fish_add_path /opt/homebrew/opt/coreutils/libexec/gnubin
 
-# Composer (PHP)
+# Composer (PHP) — XDG path is what modern Composer 2.x uses; legacy
+# kept for older installs.
+fish_add_path ~/.config/composer/vendor/bin
 fish_add_path ~/.composer/vendor/bin
 
 # Go
