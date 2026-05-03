@@ -1,0 +1,5 @@
+---
+# Go tools installed via `go install`
+# Add new tools here — Ansible picks them up automatically
+go_tools:
+  - github.com/cpcloud/micasa/cmd/micasa@latest

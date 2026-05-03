@@ -1,0 +1,36 @@
+---
+- name: Load Go tools list
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../go-tools.yml"
+
+# `go install <pkg>@<ver>` is idempotent in the sense that re-running it
+# simply re-fetches and rebuilds. We only skip if the binary already
+# exists, to keep dotfiles re-runs fast. To force a refresh, delete the
+# binary or run with --tags go-tools after upgrading.
+- name: Derive binary names from package paths
+  ansible.builtin.set_fact:
+    go_tool_specs: >-
+      {{ go_tools | map('regex_replace', '@.*$', '')
+                  | map('basename')
+                  | zip(go_tools)
+                  | map('list')
+                  | list }}
+
+- name: Check installed Go tools
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/go/bin/{{ item.0 }}"
+  register: go_bin_check
+  loop: "{{ go_tool_specs }}"
+  loop_control:
+    label: "{{ item.0 }}"
+
+- name: Install missing Go tools
+  ansible.builtin.command: /opt/homebrew/bin/go install {{ item.item.1 }}
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_facts.env.PATH }}"
+    GOBIN: "{{ ansible_facts.env.HOME }}/go/bin"
+  loop: "{{ go_bin_check.results }}"
+  loop_control:
+    label: "{{ item.item.0 }}"
+  when: not item.stat.exists
+  changed_when: true

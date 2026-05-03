@@ -155,6 +155,15 @@
       tags: [npm]
   tags: [npm]
 
+# ── Go tools (after Go is installed via Homebrew) ──
+
+- name: Install Go tools
+  ansible.builtin.include_tasks:
+    file: go-tools.yml
+    apply:
+      tags: [go-tools]
+  tags: [go-tools]
+
 # ── Agent skills (after chezmoi deploys skill-lock.json) ──
 
 - name: Install agent skills
