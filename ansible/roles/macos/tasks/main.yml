@@ -90,6 +90,7 @@
     file: defaults.yml
     apply:
       tags: [defaults]
+  when: profile | default('workstation') != 'server'
   tags: [defaults]
 
 # ── Shell setup (after fish is installed) ──
@@ -126,6 +127,7 @@
     file: karabiner.yml
     apply:
       tags: [karabiner]
+  when: profile | default('workstation') != 'server'
   tags: [karabiner]
 
 # ── Codegraff / muonry (after chezmoi for credentials symlink) ──
