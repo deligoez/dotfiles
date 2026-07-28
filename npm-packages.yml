@@ -3,3 +3,5 @@
 # Add new packages here — Ansible picks them up automatically
 npm_packages:
   - intelephense
+  - "@googleworkspace/cli"   # gws — Google Workspace CLI
+  - agent-browser
