@@ -20,6 +20,19 @@ Skip macOS system preferences if you don't want them changed:
 curl -fsSL dotfiles.deligoz.me | zsh -s -- --skip-tags macos-defaults
 ```
 
+### Headless server
+
+For an always-on box with no display (agent runner, build host), use the
+`server` profile. It installs formulae only — no casks, no Mac App Store apps,
+no Karabiner — and leaves the machine's existing hostname alone:
+
+```bash
+curl -fsSL dotfiles.deligoz.me | zsh -s -- -e profile=server --skip-tags macos-defaults
+```
+
+Formulae that are desktop-only live under `workstation_only_formulae` in
+`config.yml` and are skipped on this profile.
+
 ## Re-apply
 
 ```bash
