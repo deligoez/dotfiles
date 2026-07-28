@@ -1,4 +1,13 @@
 ---
+# Machine profile:
+#   workstation — full desktop setup (casks, MAS apps, Karabiner, macOS prefs)
+#   server      — headless box: formulae only, no GUI apps, hostname left alone
+profile: workstation
+
+# Formulae installed only on the workstation profile (skipped on servers).
+workstation_only_formulae:
+  - shivammathur/extensions/xdebug@8.5
+
 hostname: deligoez-mac
 git_email: ye@deligoz.me
 timezone: Europe/Istanbul
