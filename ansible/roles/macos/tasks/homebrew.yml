@@ -213,6 +213,18 @@
 
 # ── Compute missing packages ──
 
+# ── Server profile: drop desktop-only packages ──
+
+- name: Drop workstation-only formulae on server profile
+  ansible.builtin.set_fact:
+    desired_formulae: "{{ desired_formulae | difference(workstation_only_formulae | default([])) }}"
+  when: profile | default('workstation') == 'server'
+
+- name: Drop all casks on server profile
+  ansible.builtin.set_fact:
+    desired_casks: []
+  when: profile | default('workstation') == 'server'
+
 - name: Find missing taps
   ansible.builtin.set_fact:
     missing_taps: "{{ desired_taps | difference(installed_taps) }}"
@@ -356,6 +368,7 @@
   ansible.builtin.command: /opt/homebrew/bin/mas list
   environment: "{{ homebrew_env }}"
   register: mas_installed
+  when: profile | default('workstation') != 'server'
   changed_when: false
 
 - name: Install missing Mac App Store apps
@@ -365,7 +378,9 @@
   loop: "{{ mas_apps }}"
   loop_control:
     label: "{{ item.name }}"
-  when: "item.id | string not in mas_installed.stdout"
+  when:
+    - profile | default('workstation') != 'server'
+    - item.id | string not in mas_installed.stdout
   ignore_errors: true
 
 # ── Manual install reminders ──
