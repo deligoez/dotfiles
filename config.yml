@@ -8,6 +8,12 @@ profile: workstation
 workstation_only_formulae:
   - shivammathur/extensions/xdebug@8.5
 
+# Composer global packages installed only on the workstation profile.
+# valet serves .test domains through nginx+dnsmasq — desktop-only, and it
+# currently conflicts with the symfony 8 that laravel/installer pulls in.
+workstation_only_composer_packages:
+  - laravel/valet
+
 hostname: deligoez-mac
 git_email: ye@deligoz.me
 timezone: Europe/Istanbul
