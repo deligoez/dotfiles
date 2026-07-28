@@ -29,6 +29,15 @@ fi
 DOTFILES_DIR="$HOME/Developer/deligoez/dotfiles/dotfiles"
 DOTFILES_REPO="https://github.com/deligoez/dotfiles.git"
 
+# ── Machine profile ──
+# Passed straight through to Ansible as `-e profile=server`; detected here only
+# so the hostname step below can leave a server's existing name alone.
+PROFILE="workstation"
+for arg in "$@"; do
+    case "$arg" in
+        profile=server|--profile=server) PROFILE="server" ;;
+    esac
+done
 echo "🚀 Setting up developer workstation..."
 
 # ── Ask for sudo upfront and keep it alive throughout the script ──
@@ -98,7 +107,7 @@ if [[ "$OS" == "macos" ]]; then
     DESIRED_HOSTNAME=$(grep '^hostname:' "$DOTFILES_DIR/config.yml" | awk '{print $2}')
     CURRENT_HOSTNAME=$(scutil --get ComputerName 2>/dev/null || echo "")
     CURRENT_NETBIOS=$(defaults read /Library/Preferences/SystemConfiguration/com.apple.smb.server NetBIOSName 2>/dev/null || echo "")
-    if [[ -n "$DESIRED_HOSTNAME" && ("$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" || "$CURRENT_NETBIOS" != "$DESIRED_HOSTNAME") ]]; then
+    if [[ "$PROFILE" != "server" && -n "$DESIRED_HOSTNAME" && ("$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" || "$CURRENT_NETBIOS" != "$DESIRED_HOSTNAME") ]]; then
         echo "📛 Setting hostname to $DESIRED_HOSTNAME..."
         sudo scutil --set ComputerName "$DESIRED_HOSTNAME"
         sudo scutil --set HostName "$DESIRED_HOSTNAME"
