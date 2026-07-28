@@ -264,6 +264,17 @@
   ignore_errors: true
   loop: "{{ missing_taps }}"
 
+# Homebrew requires explicit trust for third-party taps before it will load
+# their formulae. Long-tapped machines are grandfathered in; a fresh install
+# fails with "Refusing to load formula ... from untrusted tap" without this.
+- name: Trust third-party taps
+  ansible.builtin.command: /opt/homebrew/bin/brew trust {{ item }}
+  environment: "{{ homebrew_env }}"
+  register: brew_trust
+  changed_when: "'already trusted' not in brew_trust.stdout | default('')"
+  failed_when: false
+  loop: "{{ desired_taps }}"
+
 - name: Install missing Homebrew formulae
   community.general.homebrew:
     name: "{{ item }}"
