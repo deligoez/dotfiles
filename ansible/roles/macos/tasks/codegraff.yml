@@ -1,15 +1,17 @@
 ---
-# Install codegraff (muonry daemon + zigread/zigrep/zigpatch/zigcreate CLIs)
+# Install codegraff (codedb-pro daemon + zigread/zigrep/zigpatch/zigcreate CLIs)
 # License credentials are deployed separately via chezmoi:
 #   ~/.codegraff/credentials.json -> ~/.local/share/dotfiles-private/codegraff/credentials.json
+# The binary was renamed muonry -> codedb-pro; the guard below must track the
+# current name or the installer re-downloads on every run.
 
-- name: Check if muonry is installed
+- name: Check if codedb-pro is installed
   ansible.builtin.stat:
-    path: "{{ ansible_facts.env.HOME }}/bin/muonry"
-  register: muonry_binary
+    path: "{{ ansible_facts.env.HOME }}/bin/codedb-pro"
+  register: codedb_binary
 
-- name: Install codegraff (muonry)
+- name: Install codegraff (codedb-pro)
   ansible.builtin.shell: curl -fsSL https://codegraff.com/install.sh | sh
   args:
-    creates: "{{ ansible_facts.env.HOME }}/bin/muonry"
-  when: not muonry_binary.stat.exists
+    creates: "{{ ansible_facts.env.HOME }}/bin/codedb-pro"
+  when: not codedb_binary.stat.exists
