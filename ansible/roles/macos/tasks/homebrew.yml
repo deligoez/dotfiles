@@ -54,6 +54,7 @@
       - crossoverjie/skilldeck
       - yqrashawn/goku
       - nikitabobko/tap
+      - oven-sh/bun
 
 - name: Define desired formulae
   ansible.builtin.set_fact:
@@ -96,6 +97,7 @@
       # Node.js
       - node
       - pnpm
+      - oven-sh/bun/bun
       # Go
       - go
       - goreleaser
@@ -113,6 +115,7 @@
       - k9s
       - kubernetes-cli
       - dnsmasq
+      - wireguard-tools
       # Media & Image Processing
       - ffmpeg
       - ghostscript
