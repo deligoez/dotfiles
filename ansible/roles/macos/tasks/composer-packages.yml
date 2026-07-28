@@ -3,6 +3,11 @@
   ansible.builtin.include_vars:
     file: "{{ playbook_dir }}/../composer-packages.yml"
 
+- name: Drop workstation-only Composer packages on server profile
+  ansible.builtin.set_fact:
+    composer_packages: "{{ composer_packages | difference(workstation_only_composer_packages | default([])) }}"
+  when: profile | default('workstation') == 'server'
+
 - name: Check installed Composer global packages
   ansible.builtin.command: /opt/homebrew/bin/composer global show {{ item }} --no-interaction
   environment:
