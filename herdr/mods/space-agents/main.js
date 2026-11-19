@@ -103,9 +103,10 @@ function programIcon(p, size, color) {
   return p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();
 }
 
-// An agent's state at the row's end: spinner, "Needs you", a dot for done, a ring for idle.
+// An agent's state at the row's end: a still spinner arc, "Needs you", a dot for done, a ring
+// for idle. Nothing here moves: the shipped mod spins the arc, this copy keeps it still.
 function agentStatus(t, status) {
-  if (status === "working") return svg("mods/workspace-chrome/spinner.svg").size(11).mx(1).flex_none().text_color(t.working).spin(900);
+  if (status === "working") return svg("mods/workspace-chrome/spinner.svg").size(11).mx(1).flex_none().text_color(t.working);
   if (status === "blocked") return div().flex_none().px(5).h(16).rounded(4).bg(t.blocked + "26").text_size(10).font_semibold().text_color(t.blocked).flex().items_center().child("Needs you");
   if (status === "idle") return div().size(6).mx(3).flex_none().rounded(3).border(1.5).border_color(t.idle ?? t.dim);
   return div().size(6).mx(3).flex_none().rounded(3).bg(status === "done" ? (t.done ?? t.dim) : t.dim + "00");
