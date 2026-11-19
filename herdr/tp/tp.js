@@ -30,26 +30,29 @@ export const ago = (iso) => {
 };
 export const minutes = (iso) => Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
 
-// What each task is now, as tp's dashboard sorts them:
-// done; wip; ready (open, every dependency done, epic startable); waiting.
+// What each task is now, from tp's own `state` (ready, waits_on_task, waits_on_epic,
+// wip, done) and `waits_on` (the undone dependencies, or the epic's): the same
+// fields tp's dashboard builds its columns from. Lanes: ready, wip, waiting, done.
+const LANE = { ready: "ready", wip: "wip", done: "done", waits_on_task: "waiting", waits_on_epic: "waiting" };
+
 export function classify(data) {
   const tasks = data?.tasks ?? [];
   const byId = new Map(tasks.map(t => [t.id, t]));
-  const epicHeld = (data?.resume?.blockers ?? []).some(b => b.code === "epic-blocked");
   const dependents = new Map();
   for (const t of tasks) for (const d of t.depends_on ?? []) {
     if (!dependents.has(d)) dependents.set(d, []);
     dependents.get(d).push(t.id);
   }
   return tasks.map(t => {
-    const open = (t.depends_on ?? []).filter(d => byId.get(d)?.status !== "done");
-    const lane = t.status === "done" ? "done" : t.status === "wip" ? "wip" : open.length || epicHeld ? "waiting" : "ready";
+    const lane = LANE[t.state] ?? (t.status === "open" ? "waiting" : t.status);
+    const waits = t.waits_on ?? [];
     const unblocks = (dependents.get(t.id) ?? []).filter(d => byId.get(d)?.status !== "done").length;
     let line;
     if (lane === "done") line = t.closed_at ? `closed ${ago(t.closed_at)}` : "done";
     else if (lane === "wip") line = [t.started_at ? `running ${minutes(t.started_at)} min` : "running", t.estimate_minutes ? `estimate ${t.estimate_minutes} min` : null].filter(Boolean).join(", ");
     else if (lane === "ready") line = unblocks ? `unblocks ${unblocks}` : "ready";
-    else line = open.length ? `after ${open.join(", ")}` : "waits on its epic";
+    else if (t.state === "waits_on_epic") line = waits.length ? `epic waits on ${waits.join(", ")}` : "waits on its epic";
+    else line = waits.length ? `after ${waits.join(", ")}` : "waiting";
     return { ...t, lane, line, unblocks };
   });
 }
