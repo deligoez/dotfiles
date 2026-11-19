@@ -70,11 +70,13 @@ home/                    # Chezmoi source — deployed under ~/
     ghostty/             # Terminal config + themes
     starship.toml
     rp/symlink_manifest.yaml.tmpl   # Symlink to private rp manifest
+    herdr-app/           # symlink_*.tmpl → herdr/ (our Herdr files only)
   dot_codegraff/         # Symlink template to private credentials
   intelephense/          # Symlink template to private licence
   dot_gitconfig
   dot_ssh/
 
+herdr/                   # Herdr layouts + mods we own (symlinked, see Herdr)
 archive/                 # Legacy shell scripts (reference only)
 docs/                    # Article drafts, screenshots (gitignored)
 ```
@@ -226,6 +228,51 @@ Accessibility API only.
 Workspace-to-monitor assignment is intentionally **omitted** — workspaces
 follow the focused monitor, which behaves better when the laptop
 disconnects from external displays.
+
+## Herdr (terminal app): user-owned files only, symlinked from the repo
+
+Herdr (`herdr-app`, home `~/.config/herdr-app`) is configured by layouts
+(JSON) and mods (JavaScript, gpui-kit). Its own guide is
+`~/.config/herdr-app/AGENTS.md`; read it before changing anything.
+
+- **Only our files live in the repo**, under `herdr/` (same paths as in
+  `~/.config/herdr-app`). Each one is linked by a chezmoi `symlink_*.tmpl`
+  under `home/dot_config/herdr-app/` that points at
+  `{{ .chezmoi.workingTree }}/herdr/...`. Edit the repo file; the link
+  makes it live.
+- **Never version what Herdr writes**: `AGENTS.md`, `*.d.ts`,
+  `jsconfig.json`, `frame/`, `icons/`, shipped mods and layouts,
+  `layouts/.state/`, `shared.json`, `view.json`, `data/`, `seen.json`,
+  `installed.json`, `window.json`. Link files one by one, never a whole
+  mod folder, or the generated `gpui-kit.d.ts` (800 KB) lands in git.
+- **Shipped mods and layouts are read-only** (replaced on every start).
+  Change one by cloning (`herdr-app do mod.clone` / `layout.clone`) or by
+  writing our own mod, then move the files into `herdr/`.
+- **Hot reload does not see writes through a symlink.** After editing a
+  repo file, reload by switching layouts:
+  `herdr-app do layout.switch --name main && herdr-app do layout.switch --name deligoez`.
+- **Verify every change**: `herdr-app check ~/.config/herdr-app/mods/<name>`,
+  `herdr-app status` (`errors: []`), `herdr-app shot <file.png>`, and look
+  at the picture.
+- **Our layout is `deligoez`** (clone of `main`). Which layout is active
+  is Herdr state, so a fresh machine needs one
+  `herdr-app do layout.switch --name deligoez`.
+- **New file to link**: add it under `herdr/`, add its `symlink_*.tmpl`,
+  then `chezmoi apply --source=<repo>/home ~/.config/herdr-app/<path>`
+  (remove the old real file first if one is there).
+- `settings.json` and `keys.json` are deliberately not linked: Herdr
+  writes `settings.json` itself (zoom keys, Settings UI), and `keys.json`
+  holds only the defaults.
+
+What we own today:
+
+| File | What it is |
+|---|---|
+| `herdr/layouts/deligoez.json` | `main` with one sidebar block (`space-agents`) instead of Spaces + Agents |
+| `herdr/mods/space-agents/` | Clone of the shipped `spaces` mod: each project lists its agents under it; heading reads "Projects" |
+
+Clones don't receive Herdr's updates to the shipped originals; diff
+against the shipped mod when Herdr ships a notable change.
 
 ## External / private context
 
