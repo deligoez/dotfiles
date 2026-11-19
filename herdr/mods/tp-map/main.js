@@ -11,16 +11,24 @@ import { tp, MONO } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
-// An epic's colour: tp's derived status when the layout carries one, else its
-// lifecycle state, with a planned epic whose dependencies are all done as ready.
+// An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
+// An older tp has only the lifecycle `state`: a planned epic whose dependencies are
+// all done counts as ready.
 function look(t, n, ready) {
   const s = n.status ?? (n.state === "planned" ? (ready ? "ready" : "blocked") : n.state);
   return ({
-    done: [t.done, "done"], closed: [t.done, "milestone closed"], claimed: [t.working, "claimed"],
-    bound: [t.working, "bound"], ready: [t.ansi2, "can start"], held: [t.blocked, "held by a condition"],
-    blocked: [t.dim, "blocked"], specced: [t.accent, "specced"],
+    ready: [t.ansi2, "can start"], blocked: [t.dim, "blocked"], held: [t.blocked, "held by a condition"],
+    waiting: [t.dim, "milestone not open yet"], moot: [t.dim, "moot"],
+    claimed: [t.working, "claimed"], specced: [t.accent, "specced"], in_progress: [t.working, "in progress"],
+    done: [t.done, "done"],
   })[s] ?? [t.dim, s ?? "?"];
 }
+
+// What hangs on an epic, as tp's drawer counts it.
+const downstream = (n) => {
+  const d = n.downstream;
+  return d ? `${d.dependents_open} of ${d.dependents} dependents open · longest chain ${d.longest_chain}` : null;
+};
 
 export default class Map extends View {
   init(_props, cx) {
@@ -88,7 +96,7 @@ export default class Map extends View {
   }
 
   // The map's visible area: the pane under the header (and the detail bar).
-  view() { return { width: this.size.width, height: this.size.height - 34 - (this.selected ? 72 : 0) }; }
+  view() { return { width: this.size.width, height: this.size.height - 34 - (this.selected ? 90 : 0) }; }
 
   // Where a pointer event is in the visible area, in layout px.
   local(e) {
@@ -124,14 +132,15 @@ export default class Map extends View {
 
   header(t, g) {
     const nodes = this.data?.nodes ?? [];
-    const done = nodes.filter(n => n.state === "done").length, claimed = nodes.filter(n => n.state === "claimed").length;
+    const done = nodes.filter(n => n.state === "done").length;
+    const claimed = nodes.filter(n => ["claimed", "specced", "in_progress"].includes(n.state)).length;
     const btn = (id, label, fn) => div().id(id).px(7).h(22).flex().items_center().rounded(5).text_size(12).text_color(t.muted)
       .cursor_pointer().hover(s => s.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { fn(); cx.notify(); }).child(label);
     const s = this.scale ?? 1;
     return h_flex().h(34).px(10).gap(8).items_center().flex_none().border_b(1).border_color(t.border)
       .child(div().text_size(12.5).text_color(t.foreground).child("Epics"))
       .when(nodes.length > 0, el => el.child(div().text_size(11).text_color(t.muted)
-        .child(`${nodes.length} epics · ${done} done · ${claimed} claimed · ${(this.data.bands ?? []).length} milestones`)))
+        .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${(this.data.bands ?? []).length} milestones`)))
       .child(div().flex_1())
       .when(Boolean(g), el => el
         .child(btn("zoom-out", "−", () => { const v = this.view(); this.zoomAt(1 / 1.25, v.width / 2, v.height / 2); }))
@@ -171,10 +180,14 @@ export default class Map extends View {
       .children(nodes.map(({ n, x, y }) => {
         const [color, word] = look(t, n, ready(n.id));
         const on = sel === n.id;
+        const tip = [n.id, n.title ?? "", `${word}${n.hold ? ` · ${n.hold}` : ""} · ${n.milestone}`, downstream(n)].filter(Boolean).join("\n");
         return div().id(`epic-${n.id}`).absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
           .bg(color + (n.state === "done" ? "40" : "66")).border(on ? 2 : 1).border_color(on ? t.foreground : color)
           .px(5 * s).flex().items_center().overflow_hidden().cursor_pointer()
-          .tooltip(`${n.id}\n${n.title ?? ""}\n${word} · ${n.milestone}`)
+          .tooltip(tip)
+          // A started epic that is also held or blocked: a mark in its corner.
+          .when(Boolean(n.hold), el => el.child(div().absolute().top(0).right(0).w(Math.max(4, 8 * s)).h_full()
+            .bg(n.hold === "held" ? t.blocked : t.dim)))
           .on_click((_e, cx) => { cx.stop_propagation(); this.selected = on ? null : n.id; this.refresh(); cx.notify(); })
           .when(label, el => el.child(div().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
       }));
@@ -212,7 +225,8 @@ export default class Map extends View {
       .child(h_flex().gap(8).items_center()
         .child(div().size(8).rounded(4).bg(color))
         .child(div().font_family(MONO).text_size(11.5).text_color(t.foreground).child(n.id))
-        .child(div().text_size(11).text_color(t.muted).child(`${word} · ${n.milestone}`)))
+        .child(div().text_size(11).text_color(t.muted).child(`${word}${n.hold ? ` · ${n.hold}` : ""} · ${n.milestone}`))
+        .when(Boolean(downstream(n)), el => el.child(div().text_size(11).text_color(t.dim).child(downstream(n)))))
       .child(div().text_size(12.5).text_color(t.foreground).child(n.title ?? ""))
       .child(div().text_size(11).text_color(t.muted).truncate()
         .child(`after: ${ins.length ? ins.join(", ") : "nothing"}   ·   frees: ${outs.length ? outs.join(", ") : "nothing"}`));
