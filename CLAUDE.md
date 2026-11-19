@@ -270,6 +270,8 @@ What we own today:
 |---|---|
 | `herdr/layouts/deligoez.json` | `main` with one sidebar block (`space-agents`) instead of Spaces + Agents; `ui_font: "Inter"` (cask `font-inter`); settings picture `deligoez.svg` |
 | `herdr/mods/space-agents/` | Clone of the shipped `spaces` mod: each project lists its agents under it, folded/unfolded by a chevron (kept in shared state `space-agents.folded`); heading reads "Projects" |
+| `herdr/mods/deligoez-tabs/` | Clone of the shipped `tabs` mod (top bar): a working agent's arc stands still instead of spinning |
+| `herdr/mods/deligoez-pane/` | Clone of the shipped `pane` mod (pane header): same still arc |
 | `herdr/mods/deligoez-chrome/` | Replaces the shipped `workspace-chrome` in the sidebar: top row shows `logo.svg` (from the blog's favicon) instead of the Herdr icon and name, also on the collapsed rail in fullscreen; footer (`props.footer`) shows Settings only, no "Add machine" |
 
 Clones don't receive Herdr's updates to the shipped originals; diff
