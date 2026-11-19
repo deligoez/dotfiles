@@ -24,6 +24,13 @@ function paneFrame(node) {
   return null;
 }
 
+// Our mod panes: a name and an icon of their own instead of the mod's folder name.
+const MODS = {
+  "tp-map": ["Epics map", "mods/tp-map/map.svg"],
+  "tp-board": ["Task board", "mods/tp-board/board.svg"],
+  "tp-steps": ["Task steps", "mods/tp-steps/steps.svg"],
+};
+
 function icon(p, size, color) {
   if (!p?.icon) return null;
   return p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();
@@ -60,8 +67,9 @@ export default class Pane extends View {
     const t = theme();
     const p = this.me();
     if (!p) return div();
-    const name = ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell";
-    const pic = icon(p.program, 14, t.dim);
+    const own = MODS[p.mod];
+    const name = own?.[0] ?? (((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell");
+    const pic = own ? svg(own[1]).size(14).flex_none().text_color(t.dim) : icon(p.program, 14, t.dim);
     const st = p.status;
     const pane = p.pane;
     const bottom = paneFrame(layout())?.header?.position === "bottom";
