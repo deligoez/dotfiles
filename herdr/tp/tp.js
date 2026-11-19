@@ -96,7 +96,7 @@ export function card(t, task, opts = {}) {
       .child(div().text_size(11 * s).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
 }
 
-// A spec with wip tasks first, then the most recently written task file.
+// A spec with wip tasks first, then the one that moved last.
 const score = (f) => (f.tasks?.wip ? 1 : 0);
 
 // The shared part of a view: the project, the spec picker, loading and watching.
@@ -104,7 +104,7 @@ const score = (f) => (f.tasks?.wip ? 1 : 0);
 export class TpView extends View {
   init(_props, cx) {
     this.root = props()?.root ?? null;
-    this.files = null;   // tp export --list rows, with mtime
+    this.files = null;   // tp export --list rows, with mtime (seconds of the last change)
     this.data = null;
     this.error = null;
     this.picking = false;
@@ -134,9 +134,14 @@ export class TpView extends View {
     cx.spawn(async (cx) => {
       try {
         const list = (await tp(["export", "--list"], this.root)).files ?? [];
-        const st = list.length ? await exec("stat", ["-f", "%m", ...list.map(f => f.path)], { cwd: this.root }) : null;
-        const times = (st?.stdout ?? "").trim().split("\n").map(Number);
-        list.forEach((f, i) => { f.mtime = times[i] || 0; });
+        // tp ≥ 1.28 says when each spec last moved (`updated_at`); an older tp
+        // leaves it out, and the file's mtime stands in.
+        if (list.some(f => f.updated_at)) list.forEach(f => { f.mtime = f.updated_at ? Date.parse(f.updated_at) / 1000 : 0; });
+        else {
+          const st = list.length ? await exec("stat", ["-f", "%m", ...list.map(f => f.path)], { cwd: this.root }) : null;
+          const times = (st?.stdout ?? "").trim().split("\n").map(Number);
+          list.forEach((f, i) => { f.mtime = times[i] || 0; });
+        }
         list.sort((a, b) => score(b) - score(a) || b.mtime - a.mtime);
         this.files = list;
         this.error = list.length ? null : "No tp specs in this project.";
