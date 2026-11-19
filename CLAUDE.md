@@ -275,6 +275,26 @@ What we own today:
 Clones don't receive Herdr's updates to the shipped originals; diff
 against the shipped mod when Herdr ships a notable change.
 
+Other people's mods are **copied, not linked**: `home/.chezmoiexternal.yaml`
+pulls each one as a GitHub archive pinned to a reviewed commit into
+`~/.config/herdr-app/mods/<name>` (bump the SHA to update; read the diff
+first). Use `include` alone: with `exclude` beside it, chezmoi also
+extracted files outside the mod folder.
+
+| Mod | What it is |
+|---|---|
+| `herdr-md` (ryanthedev) | Markdown viewer pane (images, Mermaid, math, vim keys). `mdh open FILE` opens one beside the calling terminal; `~/.local/bin/mdh` links to it. Runs `node`/`npm` once for math/diagrams, `ffmpeg` for video. |
+| `usage-limits` (nozikov) | Claude Code / Codex limits at the right of the status bar (`status-row` in the layout). Asks the `claude` CLI every 5 min, reads the focused session's log for numbers only. |
+
+**`hc` is two programs.** Herdr's docs say `hc` for herdr-core's CLI, but
+here `hc` on PATH is the hunk-commit tool; herdr-core is
+`~/.local/bin/herdr-core`. Inside mods `exec("hc", …)` is fine (Herdr maps
+it to its core); in a shell, type `herdr-core`.
+
+Planned: when Herdr ships terminal link handlers (merged upstream
+2026-11-18, after 0.1.16: `link_handlers` in `mod.json` + `handleLink` in
+`link.js`), add a small mod that opens Cmd-clicked `.md` links in `herdr-md`.
+
 ## External / private context
 
 - `~/.config/rp/manifest.yaml` is a symlink (deployed by chezmoi) to a
