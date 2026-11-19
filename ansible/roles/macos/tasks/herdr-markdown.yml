@@ -1,0 +1,13 @@
+---
+# Herdr Markdown: a tiny AppleScript app, made the default for .md files, that
+# opens them in a herdr-md viewer pane (`mdh open`) instead of an editor.
+# Cmd-clicking a .md link in a Herdr terminal then renders it inside Herdr.
+# Source and build script: macos/herdr-markdown/. Needs duti (homebrew.yml)
+# and herdr-md + ~/.local/bin/mdh (chezmoi).
+
+- name: Build Herdr Markdown.app and make it the default for Markdown
+  ansible.builtin.command: "{{ playbook_dir }}/../macos/herdr-markdown/install.sh"
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_facts.env.PATH }}"
+  register: herdr_markdown
+  changed_when: "'unchanged' not in herdr_markdown.stdout"

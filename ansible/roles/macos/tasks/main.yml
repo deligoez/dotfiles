@@ -130,6 +130,16 @@
   when: profile | default('workstation') != 'server'
   tags: [karabiner]
 
+# ── Herdr Markdown (after chezmoi deploys herdr-md and mdh) ──
+
+- name: Open .md files in Herdr
+  ansible.builtin.include_tasks:
+    file: herdr-markdown.yml
+    apply:
+      tags: [herdr-markdown, defaults]
+  when: profile | default('workstation') != 'server'
+  tags: [herdr-markdown, defaults]
+
 # ── Codegraff / muonry (after chezmoi for credentials symlink) ──
 
 - name: Install codegraff
