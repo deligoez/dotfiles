@@ -26,7 +26,8 @@ function toggleSidebar() {
 }
 
 // logo.svg is 376x249; keep that ratio.
-const LOGO_H = 24;
+const LOGO_H = 32;
+const LOGO_TOP = 11;
 const LOGO_W = Math.round(LOGO_H * 376 / 249);
 
 export default class DeligoezBrand extends View {
@@ -40,7 +41,8 @@ export default class DeligoezBrand extends View {
     const collapsed = narrow();
     return h_flex().size_full().bg(t.chrome).pl(collapsed ? 6 : 14).pr(10).gap(4).items_center().text_size(13.5)
       .when(window()?.platform === "macos" && !window()?.fullscreen && !collapsed, el => el.pl(76))
-      .when(!collapsed, el => el.child(h_flex().flex_1().items_center()
+      // Pinned to the top-left gap the original 24px-high logo had (11px down), so it grows right and down.
+      .when(!collapsed, el => el.child(h_flex().flex_1().h_full().items_start().pt(LOGO_TOP)
         .child(svg("mods/deligoez-brand/logo.svg").w(LOGO_W).h(LOGO_H).text_color(t.foreground))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/workspace-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
       // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
