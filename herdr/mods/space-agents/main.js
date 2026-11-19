@@ -112,6 +112,16 @@ function agentStatus(t, status) {
   return div().size(6).mx(3).flex_none().rounded(3).bg(status === "done" ? (t.done ?? t.dim) : t.dim + "00");
 }
 
+// A folded space still tells its most pressing agent state, before its chevron: a dot for
+// "Needs you" (the badge is too wide for a project row), else working, else done; idle says nothing.
+function foldedStatus(t, mine) {
+  const has = (s) => mine.some((m) => m.a.status === s);
+  if (has("blocked")) return div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked);
+  if (has("working")) return agentStatus(t, "working");
+  if (has("done")) return agentStatus(t, "done");
+  return div().flex_none();
+}
+
 export default class Spaces extends View {
   init(_props, cx) {
     this.git = {}; // where() -> { name, branch, ahead, behind, repo, linked }, null: not a repo
@@ -626,6 +636,7 @@ export default class Spaces extends View {
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_initial().min_w(SIDE_MIN).truncate().text_color(t.foreground).child(w.name))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .when(folded().includes(w.id), el => el.child(foldedStatus(t, this.agentsBySpace?.get(w.id) ?? [])))
           .when(Boolean(this.agentsBySpace?.get(w.id)?.length), el => el.child(this.foldButton(w.id, t))),
       );
   }
