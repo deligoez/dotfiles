@@ -10,3 +10,18 @@
   type: git-repo
   url: https://github.com/deligoez/deligoez-theme.git
   refreshPeriod: 168h
+
+# Third-party Herdr mods, copied (not symlinked) into Herdr's mods folder:
+# Herdr doesn't hot-reload a symlinked mod, and some mods' icons draw blank
+# through one. Pinned to a reviewed commit; bump the SHA to update.
+.config/herdr-app/mods/herdr-md:
+  type: archive
+  url: https://github.com/ryanthedev/herdr-md/archive/e96cc755eb1afd18209822b638f1e7664685193e.tar.gz
+  stripComponents: 3
+  include: ["*/mods/herdr-md/**"]
+
+.config/herdr-app/mods/usage-limits:
+  type: archive
+  url: https://github.com/nozikov/herdr-usage-limits/archive/7ea49bbe49bef99786e965f88b5ca6b124bdd941.tar.gz
+  stripComponents: 3
+  include: ["*/mods/usage-limits/**"]
