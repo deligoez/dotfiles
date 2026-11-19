@@ -1,6 +1,14 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
+import { spaces, panes, focused, exec, run, openOverlay, theme, window, shared, layout, settings, checking } from "herdr";
+
+// tp views (our tp-map, tp-board and tp-steps mods), offered when the focused
+// folder's repo has tp specs: [mod, label, icon, needs .tp/epics.json].
+const TP_VIEWS = [
+  ["tp-map", "Epics", "mods/tp-map/map.svg", true],
+  ["tp-board", "Board", "mods/tp-board/board.svg", false],
+  ["tp-steps", "Steps", "mods/tp-steps/steps.svg", false],
+];
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -28,12 +36,52 @@ function label(tab, lead) {
 }
 
 export default class Tabs extends View {
-  init() {
+  init(_props, cx) {
     this.pressed = null;
     this.scroll = ScrollHandle.new();
     try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
     if (!this.panels || typeof this.panels !== "object" || Array.isArray(this.panels)) this.panels = {};
     this.swipe = { acc: 0, steps: 0, at: 0, last: 0 };
+    this.tp = new Map();   // folder -> { root, specs, epics, at }
+    if (!checking()) cx.timer.every(3000, (cx) => this.checkTp(cx));
+  }
+
+  // The focused terminal's folder, else the space's. A focused mod pane (a tp
+  // view among them) has no folder: the last terminal's stays.
+  folder() {
+    const f = focused(), space = spaces().find(s => s.active);
+    if (space?.machine) return null;   // tp runs on this machine only
+    const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
+    if (pane?.mod && this.lastFolder?.space === space?.id) return this.lastFolder.dir;
+    const dir = pane?.cwd || f?.cwd || space?.folder || null;
+    this.lastFolder = { space: space?.id, dir };
+    return dir;
+  }
+
+  // Whether the folder's repo has tp specs (and an epic graph), checked at most
+  // every 30 seconds per folder.
+  checkTp(cx) {
+    const dir = this.folder();
+    if (!dir || this.tpBusy) return;
+    const known = this.tp.get(dir);
+    if (known && Date.now() - known.at < 30000) return;
+    this.tpBusy = true;
+    cx.spawn(async (cx) => {
+      let info = { root: null, specs: false, epics: false, at: Date.now() };
+      try {
+        const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: dir });
+        const root = top.code === 0 ? top.stdout.trim() : null;
+        if (root) {
+          const ls = await exec("git", ["ls-files", "-co", "--exclude-standard", "--", "*.tasks.json"], { cwd: root });
+          const ep = await exec("test", ["-f", `${root}/.tp/epics.json`]);
+          info = { ...info, root, specs: ls.code === 0 && ls.stdout.trim() !== "", epics: ep.code === 0 };
+        }
+      } catch {}
+      const before = JSON.stringify(this.tp.get(dir) ?? null, ["root", "specs", "epics"]);
+      this.tp.set(dir, info);
+      this.tpBusy = false;
+      if (before !== JSON.stringify(info, ["root", "specs", "epics"])) cx.notify();
+    });
   }
 
   // One tab per wheel notch. A touchpad or smooth-scrolling mouse sends many
@@ -142,6 +190,19 @@ export default class Tabs extends View {
           else { run("layout.select", { stack: "panel-body", child: id }); run("layout.show", { id: "panel" }); }
         }).child(svg(icon).size(14)).child(label);
     };
+    // A tp view opens as a pane right of the focused one, or is focused when this tab has it.
+    const tp = this.tp.get(this.folder() ?? "");
+    const tabId = shown[active]?.id;
+    const tpButton = ([mod, label, icon]) => {
+      const there = panes().find(p => p.tab === tabId && p.mod === mod);
+      return h_flex().id(`tp-${mod}`).h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+        .text_size(12).bg(there?.focused ? t.selected : t.chrome).text_color(there ? t.foreground : t.muted)
+        .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+        .on_click(() => {
+          if (there) run("pane.focus", { pane: there.pane });
+          else run("pane.split", { direction: "right", mod, props: { root: tp.root } });
+        }).child(svg(icon).size(14)).child(label);
+    };
     return h_flex().size_full().min_w(0).px(10).pl(lightsPadding).gap(3).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .on_mouse_up("left", () => { this.pressed = null; })
       .on_scroll_wheel(e => this.wheel(e))
@@ -149,6 +210,7 @@ export default class Tabs extends View {
         .on_size_change((_size, cx) => { if (active >= 0) { this.scroll.scroll_to_item(active); cx.notify(); } })
         .children(shown.map(item)))
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
+      .when(Boolean(tp?.specs), el => el.children(TP_VIEWS.filter(v => !v[3] || tp.epics).map(tpButton)))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/deligoez-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
