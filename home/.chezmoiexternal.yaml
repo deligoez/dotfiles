@@ -25,3 +25,12 @@
   url: https://github.com/nozikov/herdr-usage-limits/archive/7ea49bbe49bef99786e965f88b5ca6b124bdd941.tar.gz
   stripComponents: 3
   include: ["*/mods/usage-limits/**"]
+
+# The engine path is fixed to mods/revive/revive.mjs, so the folder must be
+# named `revive`. After a SHA bump run `dotfiles --tags herdr-revive` (it
+# re-runs `revive.mjs install` for the Claude Code hooks).
+.config/herdr-app/mods/revive:
+  type: archive
+  url: https://github.com/dmazlum/herdr-revive/archive/fce133747445a81eb3568d88caeb18fa01502eac.tar.gz
+  stripComponents: 3
+  include: ["*/mods/revive/**"]
