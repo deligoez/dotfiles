@@ -6,6 +6,7 @@
   },
   "type": "row",
   "preview": "layouts/deligoez.svg",
+  "ui_font": "Inter",
   "children": [
     {
       "id": "sidebar",
