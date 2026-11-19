@@ -140,6 +140,16 @@
   when: profile | default('workstation') != 'server'
   tags: [herdr-markdown, defaults]
 
+# ── herdr-revive (after chezmoi deploys the mod and its LaunchAgent) ──
+
+- name: Set up herdr-revive
+  ansible.builtin.include_tasks:
+    file: herdr-revive.yml
+    apply:
+      tags: [herdr-revive]
+  when: profile | default('workstation') != 'server'
+  tags: [herdr-revive]
+
 # ── Codegraff / muonry (after chezmoi for credentials symlink) ──
 
 - name: Install codegraff

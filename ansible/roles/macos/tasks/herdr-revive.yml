@@ -1,0 +1,27 @@
+---
+# herdr-revive (dmazlum): resumes the Claude Code session a Herdr terminal
+# lost to a reboot. chezmoi installs the mod, the fish glue
+# (conf.d/herdr-revive.fish) and the LaunchAgent that puts REVIVE_HC into
+# launchd's environment for the Herdr app. This adds the Claude Code hooks
+# (SessionStart/SessionEnd in ~/.claude/settings.json) and loads the agent.
+# Re-run after bumping the mod's SHA in .chezmoiexternal.yaml.
+
+- name: Install herdr-revive's agent hooks
+  ansible.builtin.command: >-
+    node {{ ansible_facts.env.HOME }}/.config/herdr-app/mods/revive/revive.mjs
+    install --no-shell
+  environment:
+    PATH: "{{ ansible_facts.env.HOME }}/.local/bin:/opt/homebrew/bin:{{ ansible_facts.env.PATH }}"
+    REVIVE_HC: "{{ ansible_facts.env.HOME }}/.local/bin/herdr-core"
+  register: revive_install
+  changed_when: "'Nothing to change' not in revive_install.stdout"
+
+- name: Put REVIVE_HC into launchd's environment
+  ansible.builtin.shell: |
+    plist="$HOME/Library/LaunchAgents/me.deligoz.revive-env.plist"
+    launchctl bootout "gui/$(id -u)/me.deligoz.revive-env" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$plist"
+    launchctl getenv REVIVE_HC
+  register: revive_env
+  changed_when: false
+  failed_when: revive_env.stdout == ""
