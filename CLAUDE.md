@@ -260,9 +260,9 @@ Herdr (`herdr-app`, home `~/.config/herdr-app`) is configured by layouts
 - **New file to link**: add it under `herdr/`, add its `symlink_*.tmpl`,
   then `chezmoi apply --source=<repo>/home ~/.config/herdr-app/<path>`
   (remove the old real file first if one is there).
-- `settings.json` and `keys.json` are deliberately not linked: Herdr
-  writes `settings.json` itself (zoom keys, Settings UI), and `keys.json`
-  holds only the defaults.
+- `settings.json` is deliberately not linked: Herdr writes it itself (zoom
+  keys, Settings UI). `keys.json` is linked (`herdr/keys.json`): Herdr's
+  defaults plus `cmd-shift-r` for the Revive dialog.
 
 What we own today:
 
