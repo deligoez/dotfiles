@@ -291,6 +291,14 @@ here `hc` on PATH is the hunk-commit tool; herdr-core is
 `~/.local/bin/herdr-core`. Inside mods `exec("hc", …)` is fine (Herdr maps
 it to its core); in a shell, type `herdr-core`.
 
+**.md files open in Herdr.** `macos/herdr-markdown/` builds
+`~/Applications/Herdr Markdown.app` (AppleScript, `mdh open FILE`) and makes
+it the default for `net.daringfireball.markdown` with `duti`
+(`dotfiles --tags herdr-markdown`). Cmd-clicking a .md link in a Herdr
+terminal goes through it into a viewer pane; with Herdr closed it falls back
+to MarkText. Finder double-clicks go the same way. Links must carry an
+absolute path: Herdr resolves a relative one against the terminal's folder.
+
 Planned: when Herdr ships terminal link handlers (merged upstream
 2026-11-18, after 0.1.16: `link_handlers` in `mod.json` + `handleLink` in
 `link.js`), add a small mod that opens Cmd-clicked `.md` links in `herdr-md`.
