@@ -27,7 +27,7 @@ function toggleSidebar() {
 }
 
 // logo.svg is 376x249; keep that ratio.
-const LOGO_H = 32;
+const LOGO_H = 40;
 const LOGO_TOP = 11;
 const LOGO_W = Math.round(LOGO_H * 376 / 249);
 
