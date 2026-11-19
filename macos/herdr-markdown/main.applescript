@@ -1,27 +1,43 @@
 -- Herdr Markdown: the default app for .md files.
 --
--- Opens each file in a herdr-md viewer pane beside the focused Herdr pane
--- (`mdh open`), so a Cmd-clicked .md link in a Herdr terminal renders inside
--- Herdr instead of in an outside editor. When Herdr isn't running or mdh
--- fails, the file goes to MarkText, or TextEdit if that is missing.
+-- Opens each file with glow in a new terminal pane to the right of the
+-- focused Herdr pane (`herdr-app do pane.split` with an argv), so a
+-- Cmd-clicked .md link in a Herdr terminal renders inside Herdr instead of in
+-- an outside editor. `q` quits glow and the pane closes with it. For images,
+-- diagrams or live reload, open the file in herdr-md by hand: `mdh open FILE`.
+-- When Herdr isn't running or the split fails, the file goes to MarkText, or
+-- TextEdit if that is missing.
 --
 -- Built and registered by ansible/roles/macos/tasks/herdr-markdown.yml.
 -- Bridge until Herdr ships terminal link handlers (after 0.1.16).
 
+property glow : "/opt/homebrew/bin/glow"
+
 on open theFiles
-	set mdh to POSIX path of (path to home folder) & ".local/bin/mdh"
-	set env to "PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin "
+	set herdr to POSIX path of (path to home folder) & ".local/bin/herdr-app"
 	repeat with f in theFiles
-		set p to quoted form of POSIX path of f
+		set p to POSIX path of f
+		set args to "{\"direction\":\"right\",\"argv\":[" & my jstr(glow) & ",\"-p\"," & my jstr(p) & "]}"
 		try
-			do shell script "pgrep -xq Herdr && " & env & quoted form of mdh & " open " & p
+			do shell script "pgrep -xq Herdr && " & quoted form of herdr & " do pane.split " & quoted form of args
 			do shell script "open -a Herdr"
 		on error
-			do shell script "open -b com.github.marktext.marktext " & p & " || open -e " & p
+			do shell script "open -b com.github.marktext.marktext " & quoted form of p & " || open -e " & quoted form of p
 		end try
 	end repeat
 end open
 
+-- A JSON string literal: backslashes and double quotes escaped.
+on jstr(s)
+	set out to ""
+	repeat with c in characters of s
+		set c to contents of c
+		if c is "\\" or c is "\"" then set out to out & "\\"
+		set out to out & c
+	end repeat
+	return "\"" & out & "\""
+end jstr
+
 on run
-	display dialog "Herdr Markdown opens .md files in a Herdr viewer pane. Open a .md file to use it." buttons {"OK"} default button 1
+	display dialog "Herdr Markdown opens .md files with glow in a Herdr pane. Open a .md file to use it." buttons {"OK"} default button 1
 end run
