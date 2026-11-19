@@ -39,13 +39,23 @@ export default class DeligoezBrand extends View {
   render() {
     const t = theme();
     const collapsed = narrow();
-    return h_flex().size_full().bg(t.chrome).pl(collapsed ? 6 : 14).pr(10).gap(4).items_center().text_size(13.5)
-      .when(window()?.platform === "macos" && !window()?.fullscreen && !collapsed, el => el.pl(76))
+    const macos = window()?.platform === "macos";
+    // macOS draws its traffic lights over this row unless the window is fullscreen.
+    const lights = macos && !window()?.fullscreen;
+    const logo = () => svg("mods/deligoez-brand/logo.svg").w(LOGO_W).h(LOGO_H).text_color(t.foreground);
+    if (collapsed) {
+      // On the macOS rail the logo takes the row when the traffic lights don't; with them, they
+      // fill it and the agents list's » unfolds the sidebar. Elsewhere the rail is too narrow
+      // for both, so the toggle keeps it.
+      return h_flex().size_full().bg(t.chrome).justify_center().items_start().pt(LOGO_TOP)
+        .when(macos && !lights, el => el.child(logo()))
+        .when(!macos, el => el.items_center().pt(0).child(this.button("sidebar-toggle", svg("mods/workspace-chrome/sidebar.svg").size(15), toggleSidebar)));
+    }
+    return h_flex().size_full().bg(t.chrome).pl(14).pr(10).gap(4).items_center().text_size(13.5)
+      .when(lights, el => el.pl(76))
       // Pinned to the top-left gap the original 24px-high logo had (11px down), so it grows right and down.
-      .when(!collapsed, el => el.child(h_flex().flex_1().h_full().items_start().pt(LOGO_TOP)
-        .child(svg("mods/deligoez-brand/logo.svg").w(LOGO_W).h(LOGO_H).text_color(t.foreground))))
-      .when(!collapsed, el => el.child(this.button("search", svg("mods/workspace-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
-      // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
-      .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/workspace-chrome/sidebar.svg").size(15), toggleSidebar)));
+      .child(h_flex().flex_1().h_full().items_start().pt(LOGO_TOP).child(logo()))
+      .child(this.button("search", svg("mods/workspace-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" })))
+      .child(this.button("sidebar-toggle", svg("mods/workspace-chrome/sidebar.svg").size(15), toggleSidebar));
   }
 }
