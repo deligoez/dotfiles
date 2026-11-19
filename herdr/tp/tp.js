@@ -80,19 +80,20 @@ export function steps(tasks) {
 export const laneColor = (t, lane) => ({ done: t.done, wip: t.working, ready: t.ansi2, waiting: t.dim })[lane] ?? t.dim;
 
 // One task as a card: a status stripe on the left, the title, the mono id and its status line.
+// opts.s scales it (a zoomed view).
 export function card(t, task, opts = {}) {
-  const color = laneColor(t, task.lane);
+  const color = laneColor(t, task.lane), s = opts.s ?? 1;
   const tip = [task.title, task.acceptance].filter(Boolean).join("\n\n");
   return h_flex().id(`card-${task.id}`).when(opts.width != null, el => el.w(opts.width)).when(opts.height != null, el => el.h(opts.height))
-    .flex_none().min_w(0).rounded(7)
+    .flex_none().min_w(0).rounded(7 * s)
     .border(1).border_color(t.border).bg(t.raised).overflow_hidden().tooltip(tip.slice(0, 600))
-    .child(div().w(3).flex_none().self_stretch().bg(color))
-    .child(v_flex().flex_1().min_w(0).px(9).py(7).gap(3)
-      .child(h_flex().gap(6).items_start()
-        .child(div().flex_1().min_w(0).text_size(12.5).text_color(task.lane === "done" ? t.muted : t.foreground).max_h(36).overflow_hidden().child(task.title ?? task.id))
-        .when(task.lane === "done", el => el.child(div().flex_none().text_size(12).text_color(t.done).child("✓"))))
-      .child(div().text_size(10.5).font_family(MONO).text_color(t.dim).truncate().child(task.id))
-      .child(div().text_size(11).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
+    .child(div().w(3 * s).flex_none().self_stretch().bg(color))
+    .child(v_flex().flex_1().min_w(0).px(9 * s).py(7 * s).gap(3 * s)
+      .child(h_flex().gap(6 * s).items_start()
+        .child(div().flex_1().min_w(0).text_size(12.5 * s).text_color(task.lane === "done" ? t.muted : t.foreground).max_h(36 * s).overflow_hidden().child(task.title ?? task.id))
+        .when(task.lane === "done", el => el.child(div().flex_none().text_size(12 * s).text_color(t.done).child("✓"))))
+      .child(div().text_size(10.5 * s).font_family(MONO).text_color(t.dim).truncate().child(task.id))
+      .child(div().text_size(11 * s).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
 }
 
 // A spec with wip tasks first, then the most recently written task file.

@@ -1,15 +1,19 @@
 // tp task steps: one spec's tasks in dependency order, read-only and live.
 // Step N holds the tasks whose latest dependency is in step N-1; lines join
-// each task to the ones it waits on. Opened from the tab bar's Steps button; see ./tp.js.
+// each task to the ones it waits on. A pinch (or Cmd/Ctrl and the wheel) zooms.
+// Opened from the tab bar's Steps button; see ./tp.js.
 import { div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { TpView, classify, steps, card, laneColor } from "./tp.js";
 
-const PAD = 12, GAP = 10, CARD_H = 76, HEAD_H = 30, STEP_GAP = 16, MIN_W = 210;
+const zoomBy = (view, k) => { view.zoom = Math.max(0.5, Math.min(1.6, (view.zoom ?? 1) * k)); };
 
 export default class Steps extends TpView {
   body(t) {
     const rows = steps(classify(this.data));
+    // A pinch (or Cmd/Ctrl and the wheel) scales everything; more cards fit a row when smaller.
+    const z = this.zoom ?? 1;
+    const PAD = 12 * z, GAP = 10 * z, CARD_H = 76 * z, HEAD_H = 30 * z, STEP_GAP = 16 * z, MIN_W = 210 * z;
     // Lay the cards out ourselves: the lines need to know where each one is.
     const avail = Math.max(MIN_W, this.size.width - 2 * PAD);
     const cols = Math.max(1, Math.floor((avail + GAP) / (MIN_W + GAP)));
@@ -38,13 +42,20 @@ export default class Steps extends TpView {
     }
 
     return v_flex().id("steps").flex_1().min_h(0).overflow_y_scroll()
+      .on_pinch((e, cx) => { zoomBy(this, 1 + e.delta); cx.notify(); })
+      .on_scroll_wheel((e, cx) => {
+        if (!(e.modifiers?.platform || e.modifiers?.control)) return;
+        cx.stop_propagation();
+        zoomBy(this, Math.exp((e.delta_lines ? e.delta_lines.y * 40 : e.delta.y) / 300));
+        cx.notify();
+      })
       .child(div().relative().w_full().h(height).flex_none()
         .children([...lines].map(([color, p]) =>
           window.paint_path(p.build(), Background.solid(color).opacity(0.45)).absolute().top(0).left(0).size_full()))
         .children(heads.map(h => h_flex().absolute().left(PAD).top(h.y).h(HEAD_H - 6).gap(8).items_center()
-          .child(div().text_size(12).text_color(t.foreground).child(`Step ${h.step}`))
-          .child(div().text_size(11).text_color(t.dim).child(h.step === 1 ? "needs no other task" : `after step ${h.step - 1}`))))
+          .child(div().text_size(12 * z).text_color(t.foreground).child(`Step ${h.step}`))
+          .child(div().text_size(11 * z).text_color(t.dim).child(h.step === 1 ? "needs no other task" : `after step ${h.step - 1}`))))
         .children([...at.values()].map(({ task, x, y }) =>
-          div().absolute().left(x).top(y).child(card(t, task, { width: w, height: CARD_H })))));
+          div().absolute().left(x).top(y).child(card(t, task, { width: w, height: CARD_H, s: z })))));
   }
 }
