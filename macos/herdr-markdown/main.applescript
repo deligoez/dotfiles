@@ -1,10 +1,11 @@
 -- Herdr Markdown: the default app for .md files.
 --
--- Opens each file with glow in a new terminal pane to the right of the
--- focused Herdr pane (`herdr-app do pane.split` with an argv), so a
--- Cmd-clicked .md link in a Herdr terminal renders inside Herdr instead of in
--- an outside editor. `q` quits glow and the pane closes with it. For images,
--- diagrams or live reload, open the file in herdr-md by hand: `mdh open FILE`.
+-- Opens each file in glow's TUI (`glow -t`) in a new terminal pane to the
+-- right of the focused Herdr pane (`herdr-app do pane.split` with an argv),
+-- so a Cmd-clicked .md link in a Herdr terminal renders inside Herdr instead
+-- of in an outside editor. The TUI reloads when the file changes; `q` quits
+-- glow and the pane closes with it (Esc goes to glow's file list instead).
+-- For images or diagrams, open the file in herdr-md by hand: `mdh open FILE`.
 -- When Herdr isn't running or the split fails, the file goes to MarkText, or
 -- TextEdit if that is missing.
 --
@@ -17,7 +18,7 @@ on open theFiles
 	set herdr to POSIX path of (path to home folder) & ".local/bin/herdr-app"
 	repeat with f in theFiles
 		set p to POSIX path of f
-		set args to "{\"direction\":\"right\",\"argv\":[" & my jstr(glow) & ",\"-p\"," & my jstr(p) & "]}"
+		set args to "{\"direction\":\"right\",\"argv\":[" & my jstr(glow) & ",\"-t\"," & my jstr(p) & "]}"
 		try
 			do shell script "pgrep -xq Herdr && " & quoted form of herdr & " do pane.split " & quoted form of args
 			do shell script "open -a Herdr"
