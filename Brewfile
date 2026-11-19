@@ -123,6 +123,7 @@ cask "opencode-desktop"                             # OpenCode GUI
 # ── Dotfile & Tap Management ──
 brew "chezmoi"                                      # Manage dotfiles across machines
 brew "defaultbrowser"                               # Set default browser from CLI
+brew "duti"                                         # Set default apps per file type
 brew "mas"                                          # Mac App Store CLI
 
 tap "gromgit/brewtils"

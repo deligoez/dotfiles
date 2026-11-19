@@ -136,6 +136,7 @@
       # Dotfile & Tap Management
       - chezmoi
       - defaultbrowser
+      - duti
       - mas
       - gromgit/brewtils/taproom
       # Testing & Profiling
