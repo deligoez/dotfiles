@@ -70,7 +70,7 @@
           "id": "tabs",
           "type": "block",
           "content": {
-            "mod": "tabs"
+            "mod": "deligoez-tabs"
           },
           "size": {
             "px": 42
@@ -89,7 +89,7 @@
                 "pane": {
                   "header": {
                     "content": {
-                      "mod": "pane"
+                      "mod": "deligoez-pane"
                     },
                     "reveal": "always",
                     "height": 30,
