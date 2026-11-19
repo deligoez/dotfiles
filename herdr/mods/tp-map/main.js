@@ -1,8 +1,8 @@
 // tp epics map: the project's epic graph as tp's dashboard lays it out
 // (`tp epic layout --json`: one band per milestone, epics by layer and column,
-// dependency curves, the critical path), read-only and live. Zoom with − / + / Fit
-// or Cmd/Ctrl and the wheel;
-// click an epic to light up its dependencies and see it in the bar below.
+// dependency curves, the critical path), read-only and live. Pinch (or Cmd/Ctrl and
+// the wheel, or − / + / Fit) zooms, two fingers pan; click an epic to light up its
+// dependencies and see it in the bar below.
 // Opened from the tab bar's Epics button; see ./tp.js.
 import { View, div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
@@ -28,6 +28,7 @@ export default class Map extends View {
     this.data = null;
     this.error = null;
     this.scale = null;      // null: fit the width on first draw
+    this.ox = 0; this.oy = 0;   // the viewport's offset into the scaled map
     this.selected = null;
     this.size = { width: 800, height: 600 };
     this.watches = [];
@@ -60,6 +61,7 @@ export default class Map extends View {
     cx.spawn(async (cx) => {
       try {
         this.data = await tp(["epic", "layout", "--json"], this.root);
+        this.refresh();
         this.error = null;
       } catch (e) {
         const m = String(e.message ?? e);
@@ -85,6 +87,34 @@ export default class Map extends View {
     return { at, width, height, bandBoxes };
   }
 
+  // The map's visible area: the pane under the header (and the detail bar).
+  view() { return { width: this.size.width, height: this.size.height - 34 - (this.selected ? 72 : 0) }; }
+
+  // Where a pointer event is in the visible area, in layout px.
+  local(e) {
+    const z = Number(settings()?.zoom) || 1;
+    const p = e.local_position ?? { x: e.position.x - (e.bounds?.x ?? 0), y: e.position.y - (e.bounds?.y ?? 0) };
+    return { x: p.x / z, y: p.y / z };
+  }
+
+  // Scale by k around (px, py) in the visible area, so that point stays put.
+  zoomAt(k, px, py) {
+    const s = this.scale ?? 1, next = Math.max(0.15, Math.min(2, s * k)), r = next / s;
+    this.ox = (this.ox + px) * r - px;
+    this.oy = (this.oy + py) * r - py;
+    this.scale = next;
+    this.refresh();
+  }
+
+  // After the data, the scale or the selection change (from an event or a task, never
+  // from render): fit the first time the size is known, then rebuild the edge paths.
+  refresh() {
+    if (!this.data) return;
+    if (this.scale == null) { if (!this.sized) return; this.scale = this.fit(this.geometry()); }
+    const s = this.scale;
+    this.paths = this.buildStrokes(this.geometry(s), this.data.edges ?? [], s, this.selected);
+  }
+
   // The scale that fits the map's width (whole: its height too) in the pane.
   fit(g, whole) {
     const w = this.size.width - 4, h = this.size.height - 80;
@@ -104,10 +134,10 @@ export default class Map extends View {
         .child(`${nodes.length} epics · ${done} done · ${claimed} claimed · ${(this.data.bands ?? []).length} milestones`)))
       .child(div().flex_1())
       .when(Boolean(g), el => el
-        .child(btn("zoom-out", "−", () => { this.scale = Math.max(0.15, s / 1.25); }))
+        .child(btn("zoom-out", "−", () => { const v = this.view(); this.zoomAt(1 / 1.25, v.width / 2, v.height / 2); }))
         .child(div().text_size(11).text_color(t.dim).w(38).flex().justify_center().child(`${Math.round(s * 100)}%`))
-        .child(btn("zoom-in", "+", () => { this.scale = Math.min(2, s * 1.25); }))
-        .child(btn("zoom-fit", "Fit", () => { this.scale = this.fit(g, true); })));
+        .child(btn("zoom-in", "+", () => { const v = this.view(); this.zoomAt(1.25, v.width / 2, v.height / 2); }))
+        .child(btn("zoom-fit", "Fit", () => { this.scale = this.fit(g, true); this.ox = 0; this.oy = 0; this.refresh(); })));
   }
 
   canvas(t, g) {
@@ -122,8 +152,38 @@ export default class Map extends View {
 
     // Edges by kind: plain, critical, and the selected epic's. One path holds at
     // most CHUNK curves: a single path with thousands of them doesn't draw.
+    // They are built in refresh(), outside render: a render that built them beside
+    // another busy pane ran out of time ("interrupted").
+    const strokes = this.paths ?? [];
+    const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
+    const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
+    const label = s >= 0.45;
+
+    return div().id("map-canvas").relative().w(g.width * s).h(g.height * s).flex_none()
+      .on_click((_e, cx) => { if (this.selected) { this.selected = null; this.refresh(); } cx.notify(); })
+      .children(g.bandBoxes.map(({ b, i, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
+        .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
+        // The milestone's name stays readable at any zoom.
+        .child(div().absolute().left(PAD * s).top(2).text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted)
+          .child(`${b.milestone} · ${nodes.filter(a => a.n.milestone === b.milestone).length}`))))
+      .children(strokes.map(([k, path]) =>
+        window.paint_path(path, stroke[k]).absolute().top(0).left(0).size_full()))
+      .children(nodes.map(({ n, x, y }) => {
+        const [color, word] = look(t, n, ready(n.id));
+        const on = sel === n.id;
+        return div().id(`epic-${n.id}`).absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
+          .bg(color + (n.state === "done" ? "40" : "66")).border(on ? 2 : 1).border_color(on ? t.foreground : color)
+          .px(5 * s).flex().items_center().overflow_hidden().cursor_pointer()
+          .tooltip(`${n.id}\n${n.title ?? ""}\n${word} · ${n.milestone}`)
+          .on_click((_e, cx) => { cx.stop_propagation(); this.selected = on ? null : n.id; this.refresh(); cx.notify(); })
+          .when(label, el => el.child(div().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
+      }));
+  }
+
+  // The edge curves as built paths, [kind, path], plain first so the rest draw on top.
+  buildStrokes(g, edges, s, sel) {
     const CHUNK = 200, width = { plain: 1, critical: 1.6, chosen: 2 };
-    const strokes = [];   // [kind, PathBuilder]
+    const strokes = [];
     const open = {};
     for (const e of edges) {
       const a = g.at.get(e.from), b = g.at.get(e.to);
@@ -135,33 +195,9 @@ export default class Map extends View {
       open[kind].p = open[kind].p.move_to(x0, y0).cubic_bezier_to(x1, y1, x0, y0 + bend, x1, y1 - bend);
       open[kind].n++;
     }
-    // Plain first, so the critical path and the chosen epic's lines draw on top.
     const order = { plain: 0, critical: 1, chosen: 2 };
     strokes.sort((x, y) => order[x[0]] - order[y[0]]);
-    // Thousands of plain lines turn into a grey sheet: the more there are, the fainter each.
-    const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
-    const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
-    const label = s >= 0.45;
-
-    return div().id("map-canvas").relative().w(g.width * s).h(g.height * s).flex_none()
-      .on_click((_e, cx) => { this.selected = null; cx.notify(); })
-      .children(g.bandBoxes.map(({ b, i, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
-        .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
-        // The milestone's name stays readable at any zoom.
-        .child(div().absolute().left(PAD * s).top(2).text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted)
-          .child(`${b.milestone} · ${nodes.filter(a => a.n.milestone === b.milestone).length}`))))
-      .children(strokes.map(([k, o]) =>
-        window.paint_path(o.p.build(), stroke[k]).absolute().top(0).left(0).size_full()))
-      .children(nodes.map(({ n, x, y }) => {
-        const [color, word] = look(t, n, ready(n.id));
-        const on = sel === n.id;
-        return div().id(`epic-${n.id}`).absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
-          .bg(color + (n.state === "done" ? "40" : "66")).border(on ? 2 : 1).border_color(on ? t.foreground : color)
-          .px(5 * s).flex().items_center().overflow_hidden().cursor_pointer()
-          .tooltip(`${n.id}\n${n.title ?? ""}\n${word} · ${n.milestone}`)
-          .on_click((_e, cx) => { cx.stop_propagation(); this.selected = on ? null : n.id; cx.notify(); })
-          .when(label, el => el.child(div().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
-      }));
+    return strokes.map(([k, o]) => [k, o.p.build()]);
   }
 
   // The selected epic: what it is and what it waits on and frees.
@@ -184,29 +220,38 @@ export default class Map extends View {
 
   render() {
     const t = theme();
-    if (this.data && this.scale == null && this.sized) this.scale = this.fit(this.geometry());
     const g = this.data ? this.geometry(this.scale ?? 1) : null;
+    if (g) {
+      // Keep the map in view: no panning past its edges.
+      const s = this.scale ?? 1, view = this.view();
+      this.ox = Math.max(0, Math.min(this.ox, g.width * s - view.width));
+      this.oy = Math.max(0, Math.min(this.oy, g.height * s - view.height));
+    }
     return v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground)
       // Reported in window pixels; the layout's px are scaled by the app's zoom.
       .on_size_change((size, cx) => {
         const z = Number(settings()?.zoom) || 1;
         this.size = { width: size.width / z, height: size.height / z };
+        const first = !this.sized;
         this.sized = true;
+        if (first) this.refresh();
         cx.notify();
       })
       .child(this.header(t, g))
       .child(!g ? v_flex().flex_1().items_center().justify_center().px(20).text_size(12.5).text_color(t.muted)
           .child(this.error ?? "Loading the epic map…")
-        // Cmd or Ctrl with the wheel (or a pinch's scroll) zooms; a plain wheel pans.
-        : div().id("map-scroll").flex_1().min_h(0).overflow_scroll()
+        // Our own viewport, so a zoom can keep the point under the fingers in place:
+        // a pinch (or Cmd/Ctrl and the wheel) zooms there, two fingers or the wheel pan.
+        : div().id("map-view").flex_1().min_h(0).relative().overflow_hidden()
+          .on_pinch((e, cx) => { const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
-            if (!(e.modifiers?.platform || e.modifiers?.control)) return;
             cx.stop_propagation();
-            const dy = e.delta_lines?.y ? e.delta_lines.y * 20 : e.delta.y;
-            this.scale = Math.max(0.15, Math.min(2, (this.scale ?? 1) * Math.exp(dy / 300)));
+            const d = e.delta_lines ? { x: e.delta_lines.x * 40, y: e.delta_lines.y * 40 } : e.delta;
+            if (e.modifiers?.platform || e.modifiers?.control) { const p = this.local(e); this.zoomAt(Math.exp(d.y / 300), p.x, p.y); }
+            else { this.ox -= d.x; this.oy -= d.y; }
             cx.notify();
           })
-          .child(this.canvas(t, g)))
+          .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy)))
       .when(Boolean(g && this.selected), el => el.child(this.detail(t, g)));
   }
 }
