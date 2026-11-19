@@ -1,9 +1,10 @@
-// The sidebar's top row: the shipped workspace-chrome brand row, with the
-// Herdr icon and name replaced by the deligoez logo. The footer stays on
-// workspace-chrome; its icons are reused from there.
+// The sidebar's chrome, in place of the shipped workspace-chrome mod:
+// - top row: the deligoez logo instead of the Herdr icon and name;
+// - footer (props.footer): Settings only, no "Add machine".
+// Icons are reused from workspace-chrome.
 import { View, div, svg } from "gpui-kit";
-import { h_flex } from "gpui-base";
-import { theme, run, window, shared, setShared, layout } from "herdr";
+import { h_flex, v_flex } from "gpui-base";
+import { theme, run, props, window, shared, setShared, updates, layout } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -39,6 +40,18 @@ export default class DeligoezChrome extends View {
   render() {
     const t = theme();
     const collapsed = narrow();
+    if (props()?.footer) {
+      // The shipped footer without its "Add machine" row: only Settings, with the update dot.
+      const ready = div().size(6).rounded_full().bg(t.accent);
+      return v_flex().size_full().bg(t.chrome).border_t(1).border_color(t.border).px(8).pt(4).pb(8).text_size(13)
+        .when(collapsed, el => el.px(0).items_center())
+        .child(h_flex().id("settings").h(28).px(8).gap(9).items_center().rounded(8)
+          .when(collapsed, el => el.relative().w(32).px(0).justify_center().tooltip("Settings"))
+          .text_color(t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).cursor_pointer()
+          .on_click(() => run("app.settings")).child(svg("mods/workspace-chrome/settings.svg").size(14))
+          .when(!collapsed, el => el.child("Settings"))
+          .when(Boolean(updates().app.ready), el => el.child(collapsed ? ready.absolute().top(5).right(6) : ready)));
+    }
     const macos = window()?.platform === "macos";
     // macOS draws its traffic lights over this row unless the window is fullscreen.
     const lights = macos && !window()?.fullscreen;
