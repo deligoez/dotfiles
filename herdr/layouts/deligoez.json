@@ -14,7 +14,7 @@
           "id": "brand",
           "type": "block",
           "content": {
-            "mod": "deligoez-brand"
+            "mod": "deligoez-chrome"
           },
           "size": {
             "px": 46

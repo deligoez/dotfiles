@@ -30,7 +30,7 @@ const LOGO_H = 32;
 const LOGO_TOP = 11;
 const LOGO_W = Math.round(LOGO_H * 376 / 249);
 
-export default class DeligoezBrand extends View {
+export default class DeligoezChrome extends View {
   button(id, label, action) {
     const t = theme();
     return div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(t.muted).hover(s => s.bg(t.hover).text_color(t.foreground))
@@ -42,7 +42,7 @@ export default class DeligoezBrand extends View {
     const macos = window()?.platform === "macos";
     // macOS draws its traffic lights over this row unless the window is fullscreen.
     const lights = macos && !window()?.fullscreen;
-    const logo = () => svg("mods/deligoez-brand/logo.svg").w(LOGO_W).h(LOGO_H).text_color(t.foreground);
+    const logo = () => svg("mods/deligoez-chrome/logo.svg").w(LOGO_W).h(LOGO_H).text_color(t.foreground);
     if (collapsed) {
       // On the macOS rail the logo takes the row when the traffic lights don't; with them, they
       // fill it and the agents list's » unfolds the sidebar. Elsewhere the rail is too narrow
