@@ -9,6 +9,10 @@ import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle } from "gpui-base";
 import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout } from "herdr";
 
+// Spaces whose agents are folded away, by id; kept in shared state so it survives restarts.
+const FOLDED = "space-agents.folded";
+const folded = () => shared(FOLDED) ?? [];
+
 function find(node, id) {
   if (node?.id === id) return node;
   for (const child of node?.children ?? []) {
@@ -532,16 +536,39 @@ export default class Spaces extends View {
   }
 
   // A space and, right under it, its agents: one child of the list, so scrolling
-  // to the active space still counts one item per space.
+  // to the active space still counts one item per space. A folded space hides them.
   row(r, t) {
     const mine = this.agentsBySpace?.get(r.w.id) ?? [];
     const head = this.spaceRow(r, t);
-    if (!mine.length) return head;
+    if (!mine.length || folded().includes(r.w.id)) return head;
     // Under the space's name: past its avatar, or past the branch glyph of a worktree row.
     const indent = r.tree ? 44 : 27;
     return v_flex().flex_none().child(head).child(
       v_flex().flex_none().pt(1).pb(4).gap(1).children(mine.map((m) => this.agentRow(m, indent, t))),
     );
+  }
+
+  // The chevron at the end of a space row: down while its agents show, right while folded.
+  // Its own mouse-down stops there, so a click neither selects nor starts dragging the space.
+  foldButton(id, t) {
+    const shut = folded().includes(id);
+    return div()
+      .id(`fold-${id}`)
+      .size(18)
+      .flex_none()
+      .flex()
+      .items_center()
+      .justify_center()
+      .rounded(5)
+      .text_color(t.dim)
+      .hover((s) => s.bg(t.hover).text_color(t.foreground))
+      .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+      .on_click((_e, cx) => {
+        cx.stop_propagation();
+        setShared(FOLDED, shut ? folded().filter((f) => f !== id) : [...folded(), id]);
+        cx.notify();
+      })
+      .child(svg(`mods/workspace-chrome/chevron-${shut ? "right" : "down"}.svg`).size(13));
   }
 
   spaceRow({ w, i, g, tree }, t) {
@@ -597,7 +624,8 @@ export default class Spaces extends View {
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).flex_none().text_color(t.dim)))
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_initial().min_w(SIDE_MIN).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
+          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .when(Boolean(this.agentsBySpace?.get(w.id)?.length), el => el.child(this.foldButton(w.id, t))),
       );
   }
 
