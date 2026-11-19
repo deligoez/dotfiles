@@ -209,6 +209,7 @@
       - logisim-evolution
       # Fonts
       - font-iosevka
+      - font-inter
       # Third-Party Casks
       - crossoverjie/skilldeck/skilldeck
       # Setapp

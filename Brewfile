@@ -196,6 +196,7 @@ cask "logisim-evolution"                            # Digital logic simulator
 
 # ── Fonts ──
 cask "font-iosevka"                                 # Monospace coding font
+cask "font-inter"                                   # UI font (Herdr's interface font)
 
 # ── Third-Party Casks ──
 tap "crossoverjie/skilldeck"
