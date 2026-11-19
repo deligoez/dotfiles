@@ -1,0 +1,2 @@
+{{- /* A copy, not a link: Herdr refuses a module import that resolves outside the mod's folder. Edit herdr/tp/tp.js, then chezmoi apply. */ -}}
+{{ include (joinPath .chezmoi.workingTree "herdr/tp/tp.js") }}
