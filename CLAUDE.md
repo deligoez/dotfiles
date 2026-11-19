@@ -308,11 +308,13 @@ it to its core); in a shell, type `herdr-core`.
 `~/Applications/Herdr Markdown.app` (AppleScript) and makes it the default
 for `net.daringfireball.markdown` with `duti`
 (`dotfiles --tags herdr-markdown`). It runs
-`herdr-app do pane.split '{"direction":"right","argv":["glow","-p",FILE]}'`:
-a plain terminal pane, the terminal's own font and scrolling; `q` quits glow
-and the pane closes. herdr-md stays installed for what glow can't do (images,
-Mermaid, math, live reload): `mdh open FILE` by hand. With Herdr closed the
-app falls back to MarkText. Finder double-clicks go the same way. Links must
+`herdr-app do pane.split '{"direction":"right","argv":["glow","-t",FILE]}'`:
+glow's TUI in a plain terminal pane, the terminal's own font; it reloads when
+the file changes; `q` quits glow and the pane closes (Esc opens glow's file
+list). herdr-md stays installed for what glow can't do (images, Mermaid,
+math): `mdh open FILE` by hand. Terminal viewers with images (mdfried,
+md-tui) drew them blocky in Herdr and jumped on start (tried 2026-11-19).
+With Herdr closed the app falls back to MarkText. Finder double-clicks go the same way. Links must
 carry an absolute path: Herdr resolves a relative one against the terminal's
 folder.
 
