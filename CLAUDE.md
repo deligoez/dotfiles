@@ -273,9 +273,18 @@ What we own today:
 | `herdr/mods/deligoez-tabs/` | Clone of the shipped `tabs` mod (top bar): a working agent's arc stands still instead of spinning |
 | `herdr/mods/deligoez-pane/` | Clone of the shipped `pane` mod (pane header): same still arc |
 | `herdr/mods/deligoez-chrome/` | Replaces the shipped `workspace-chrome` in the sidebar: top row shows `logo.svg` (from the blog's favicon) instead of the Herdr icon and name, also on the collapsed rail in fullscreen; footer (`props.footer`) shows Settings only, no "Add machine" |
+| `herdr/mods/tp-map/`, `tp-board/`, `tp-steps/` | Read-only, live tp views, each a normal mod pane (split, zoom, close): the project's epic graph (`tp epic layout --json`), one spec's tasks in four columns, and the same tasks by dependency step (`tp export --file`). `deligoez-tabs` shows Epics / Board / Steps when the focused folder's repo has `*.tasks.json` (Epics only with `.tp/epics.json`) and opens the pane with `props.root` = the repo; `deligoez-pane` names them |
+| `herdr/tp/tp.js` | Shared by the three tp mods: the spec picker (choice per repo in shared `tp.spec`), `tp` calls, watching, cards |
 
 Clones don't receive Herdr's updates to the shipped originals; diff
 against the shipped mod when Herdr ships a notable change.
+
+**`tp.js` is copied, not linked.** Herdr refuses a module import that resolves
+outside the mod's folder, and a symlink does. So each tp mod gets `tp.js` from a
+`tp.js.tmpl` that `include`s `herdr/tp/tp.js`: after editing it, run
+`chezmoi apply --force --source=$PWD/home ~/.config/herdr-app/mods/tp-{map,board,steps}`.
+An open tp pane keeps its old code until it is closed and opened again (a
+layout switch restarts layout mods, not pane mods).
 
 Other people's mods are **copied, not linked**: `home/.chezmoiexternal.yaml`
 pulls each one as a GitHub archive pinned to a reviewed commit into
