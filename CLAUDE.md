@@ -285,6 +285,19 @@ extracted files outside the mod folder.
 |---|---|
 | `herdr-md` (ryanthedev) | Markdown viewer pane (images, Mermaid, math, vim keys). `mdh open FILE` opens one beside the calling terminal; `~/.local/bin/mdh` links to it. Runs `node`/`npm` once for math/diagrams, `ffmpeg` for video. |
 | `usage-limits` (nozikov) | Claude Code / Codex limits at the right of the status bar (`status-row` in the layout). Asks the `claude` CLI every 5 min, reads the focused session's log for numbers only. |
+| `revive` (dmazlum) | After a reboot or core restart, resumes the Claude Code session each terminal had (`claude --resume <id>`), at the first fish prompt. `cmd-shift-r` opens its dialog. See below. |
+
+**Revive needs three pieces of glue here** (`dotfiles --tags herdr-revive`):
+- `conf.d/herdr-revive.fish`: Revive's rc block is zsh/bash only. The fish
+  twin runs `revive.mjs check` and hands the script to `zsh -c`. It also puts
+  `--dangerously-skip-permissions` back, which Revive drops from automatic
+  resumes, but only for sessions recorded with it.
+- `REVIVE_HC=~/.local/bin/herdr-core` (see the next paragraph): set in fish
+  for the hooks, and in launchd's environment by
+  `~/Library/LaunchAgents/me.deligoz.revive-env.plist` for the dialog, which
+  runs from the Herdr app. Herdr must start after it to see it.
+- `revive.mjs install --no-shell` adds its SessionStart/SessionEnd hooks to
+  `~/.claude/settings.json` (and to Codex, pi and omp when present).
 
 **`hc` is two programs.** Herdr's docs say `hc` for herdr-core's CLI, but
 here `hc` on PATH is the hunk-commit tool; herdr-core is
