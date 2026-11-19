@@ -270,7 +270,7 @@ What we own today:
 |---|---|
 | `herdr/layouts/deligoez.json` | `main` with one sidebar block (`space-agents`) instead of Spaces + Agents |
 | `herdr/mods/space-agents/` | Clone of the shipped `spaces` mod: each project lists its agents under it; heading reads "Projects" |
-| `herdr/mods/deligoez-chrome/` | Our own sidebar top row: `logo.svg` (from the blog's favicon) instead of the Herdr icon and name; search and sidebar toggle kept |
+| `herdr/mods/deligoez-chrome/` | Replaces the shipped `workspace-chrome` in the sidebar: top row shows `logo.svg` (from the blog's favicon) instead of the Herdr icon and name, also on the collapsed rail in fullscreen; footer (`props.footer`) shows Settings only, no "Add machine" |
 
 Clones don't receive Herdr's updates to the shipped originals; diff
 against the shipped mod when Herdr ships a notable change.
