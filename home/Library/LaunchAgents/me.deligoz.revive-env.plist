@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Herdr's Revive dialog runs `node revive.mjs` from the Herdr app, whose
+  environment comes from launchd (plus the login shell's PATH, nothing else).
+  Revive calls `hc` for herdr-core, but `hc` here is the hunk-commit tool, so
+  REVIVE_HC must reach launchd's environment before Herdr starts.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>me.deligoz.revive-env</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>launchctl setenv REVIVE_HC "$HOME/.local/bin/herdr-core"</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
