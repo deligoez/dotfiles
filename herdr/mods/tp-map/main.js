@@ -195,9 +195,16 @@ export default class Map extends View {
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
     const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
     const label = s >= 0.45;
+    // Only what is in view (and a margin) is drawn: all of a big graph's nodes, a
+    // panel beside them, ran a render out of time ("interrupted").
+    const v = this.view(), m = 200;
+    const shown = nodes.filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
+      && (y + NH) * s >= this.oy - m && y * s <= this.oy + v.height + m);
 
-    return div().id("map-canvas").relative().w(g.width * s).h(g.height * s).flex_none()
-      .on_click((_e, cx) => { if (this.selected) { this.selected = null; this.refresh(); } cx.notify(); })
+    // Nodes are plain boxes: no id, click handler or tooltip each. Hundreds of
+    // interactive elements beside the detail panel ran the render out of time; the
+    // viewport finds the epic under a click instead (hit()).
+    return div().relative().w(g.width * s).h(g.height * s).flex_none()
       .children(g.bandBoxes.map(({ b, i, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
         .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
         // The milestone's name stays readable at any zoom.
@@ -205,20 +212,25 @@ export default class Map extends View {
           .child(`${b.milestone} · ${nodes.filter(a => a.n.milestone === b.milestone).length}`))))
       .children(strokes.map(([k, path]) =>
         window.paint_path(path, stroke[k]).absolute().top(0).left(0).size_full()))
-      .children(nodes.map(({ n, x, y }) => {
-        const [color, word] = look(t, n, ready(n.id));
+      .children(shown.map(({ n, x, y }) => {
+        const [color] = look(t, n, ready(n.id));
         const on = sel === n.id;
-        const tip = [n.id, n.title ?? "", `${word}${n.hold ? ` · ${n.hold}` : ""} · ${n.milestone}`, downstream(n)].filter(Boolean).join("\n");
-        return div().id(`epic-${n.id}`).absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
+        return div().absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
           .bg(color + (n.state === "done" ? "40" : "66")).border(on ? 2 : 1).border_color(on ? t.foreground : color)
-          .px(5 * s).flex().items_center().overflow_hidden().cursor_pointer()
-          .tooltip(tip)
+          .px(5 * s).flex().items_center().overflow_hidden()
           // A started epic that is also held or blocked: a mark in its corner.
           .when(Boolean(n.hold), el => el.child(div().absolute().top(0).right(0).w(Math.max(4, 8 * s)).h_full()
             .bg(n.hold === "held" ? t.blocked : t.dim)))
-          .on_click((_e, cx) => { cx.stop_propagation(); this.selected = on ? null : n.id; this.refresh(); cx.notify(); })
           .when(label, el => el.child(div().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
       }));
+  }
+
+  // The epic under a pointer event in the viewport, if any.
+  hit(e) {
+    const g = this.geometry(this.scale ?? 1), s = this.scale ?? 1, p = this.local(e);
+    const mx = (this.ox + p.x) / s, my = (this.oy + p.y) / s;
+    for (const { n, x, y } of g.at.values()) if (mx >= x && mx <= x + NW && my >= y && my <= y + NH) return n.id;
+    return null;
   }
 
   // The edge curves as built paths, [kind, path], plain first so the rest draw on top.
@@ -296,6 +308,8 @@ export default class Map extends View {
         // Our own viewport, so a zoom can keep the point under the fingers in place:
         // a pinch (or Cmd/Ctrl and the wheel) zooms there, two fingers or the wheel pan.
         : div().id("map-view").flex_1().min_h(0).relative().overflow_hidden()
+          // A click selects the epic under it (again: clears it), or clears on empty space.
+          .on_mouse_up("left", (e, cx) => { const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx); cx.notify(); })
           .on_pinch((e, cx) => { const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
             cx.stop_propagation();
