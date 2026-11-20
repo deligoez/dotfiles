@@ -44,6 +44,35 @@ export const ago = (iso) => {
   return `${Math.round(s / 86400)} d. ago`;
 };
 export const minutes = (iso) => Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+const span = (m) => m < 90 ? `${m} min`
+  : m < 2880 ? (m % 60 ? `${Math.floor(m / 60)} hr ${m % 60} min` : `${m / 60} hr`)
+  : `${Math.round(m / 1440)} d.`;
+
+// How long a spec has been worked on: the union of its tasks' claim-to-close
+// spans (open ones up to now), so tasks run side by side count once. Claim time
+// counts whole, idle too, as in took(). Null before the first claim.
+export function worked(tasks) {
+  const spans = tasks.filter(t => t.started_at && t.duration_source !== "implicit")
+    .map(t => [Date.parse(t.started_at), t.closed_at ? Date.parse(t.closed_at) : Date.now()])
+    .sort((a, b) => a[0] - b[0]);
+  if (!spans.length) return null;
+  let ms = 0, [a, b] = spans[0];
+  for (const [s, e] of spans.slice(1)) {
+    if (s > b) { ms += b - a; a = s; }
+    b = Math.max(b, e);
+  }
+  ms += b - a;
+  return { minutes: Math.round(ms / 60000), since: new Date(spans[0][0]).toISOString() };
+}
+
+// How long a done task took: claim to close, wall clock (tp report's
+// actual_minutes), so idle and waiting time count too. Only a claimed task has
+// one: an implicit claim is stamped at close, and a covered-by close has none.
+function took(t) {
+  if (t.duration_source !== "claimed" || !t.started_at || !t.closed_at) return null;
+  const m = Math.max(0, Math.round((Date.parse(t.closed_at) - Date.parse(t.started_at)) / 60000));
+  return `took ${span(m)}` + (t.estimate_minutes ? ` (est. ${span(t.estimate_minutes)})` : "");
+}
 
 // What each task is now, from tp's own `state` (ready, waits_on_task, waits_on_epic,
 // wip, done) and `waits_on` (the undone dependencies, or the epic's): the same
@@ -63,7 +92,7 @@ export function classify(data) {
     const waits = t.waits_on ?? [];
     const unblocks = (dependents.get(t.id) ?? []).filter(d => byId.get(d)?.status !== "done").length;
     let line;
-    if (lane === "done") line = t.closed_at ? `closed ${ago(t.closed_at)}` : "done";
+    if (lane === "done") line = [took(t), t.closed_at ? ago(t.closed_at) : "done"].filter(Boolean).join(" · ");
     else if (lane === "wip") line = [t.started_at ? `running ${minutes(t.started_at)} min` : "running", t.estimate_minutes ? `estimate ${t.estimate_minutes} min` : null].filter(Boolean).join(", ");
     else if (lane === "ready") line = unblocks ? `unblocks ${unblocks}` : "ready";
     else if (t.state === "waits_on_epic") line = waits.length ? `epic waits on ${waits.join(", ")}` : "waits on its epic";
