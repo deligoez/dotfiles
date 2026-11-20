@@ -14,8 +14,9 @@ const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
 // all done counts as ready.
-function look(t, n, ready) {
-  const s = n.status ?? (n.state === "planned" ? (ready ? "ready" : "blocked") : n.state);
+const statusOf = (n, ready) => n.status ?? (n.state === "planned" ? (ready ? "ready" : "blocked") : n.state);
+
+function look(t, s) {
   return ({
     ready: [t.ansi2, "can start"], blocked: [t.dim, "blocked"], held: [t.blocked, "held by a condition"],
     waiting: [t.dim, "milestone not open yet"], moot: [t.dim, "moot"],
@@ -115,7 +116,9 @@ export default class Map extends View {
     for (const n of d.nodes ?? []) at.set(n.id, { n, x: x(n.col), y: y(n.layer) });
     const width = x((d.columns ?? 1)) + PAD;
     const height = y(Math.max(0, (d.layers ?? 1) - 1)) + NH + PAD;
-    const bandBoxes = bands.map((b, i) => ({ b, i, top: y(b.from_layer) - head, bottom: y(b.to_layer) + NH + 10 }));
+    const count = new globalThis.Map();
+    for (const n of d.nodes ?? []) count.set(n.milestone, (count.get(n.milestone) ?? 0) + 1);
+    const bandBoxes = bands.map((b, i) => ({ b, i, n: count.get(b.milestone) ?? 0, top: y(b.from_layer) - head, bottom: y(b.to_layer) + NH + 10 }));
     return { at, width, height, bandBoxes };
   }
 
@@ -143,12 +146,22 @@ export default class Map extends View {
   }
 
   // After the data, the scale or the selection change (from an event or a task, never
-  // from render): fit the first time the size is known, then rebuild the edge paths.
+  // from render): fit the first time the size is known, then lay the map out and
+  // build its paths. A render (one per pointer move while panning) only places them.
   refresh() {
     if (!this.data) return;
     if (this.scale == null) { if (!this.sized) return; this.scale = this.fit(this.geometry()); }
-    const s = this.scale;
-    this.paths = this.buildStrokes(this.geometry(s), this.data.edges ?? [], s, this.selected);
+    const s = this.scale, g = this.geometry(s), edges = this.data.edges ?? [];
+    this.geo = g; this.geoScale = s;
+    this.paths = this.buildStrokes(g, edges, s, this.selected);
+    this.boxes = this.buildBoxes(g, edges, s);
+  }
+
+  // The layout at the current scale: the one refresh() made, unless that is stale.
+  layout() {
+    if (!this.data) return null;
+    const s = this.scale ?? 1;
+    return this.geo && this.geoScale === s ? this.geo : this.geometry(s);
   }
 
   // The scale that fits the map's width (whole: its height too) in the pane.
@@ -179,12 +192,7 @@ export default class Map extends View {
 
   canvas(t, g) {
     const s = this.scale ?? 1;
-    const nodes = [...g.at.values()];
     const edges = this.data.edges ?? [];
-    const doneIds = new Set(nodes.filter(a => a.n.state === "done").map(a => a.n.id));
-    const incoming = new globalThis.Map();
-    for (const e of edges) { if (!incoming.has(e.to)) incoming.set(e.to, []); incoming.get(e.to).push(e.from); }
-    const ready = (id) => (incoming.get(id) ?? []).every(f => doneIds.has(f));
     const sel = this.selected;
 
     // Edges by kind: plain, critical, and the selected epic's. One path holds at
@@ -194,40 +202,70 @@ export default class Map extends View {
     const strokes = this.paths ?? [];
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
     const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
-    const label = s >= 0.45;
-    // Only what is in view (and a margin) is drawn: all of a big graph's nodes, a
-    // panel beside them, ran a render out of time ("interrupted").
+    // Labels only from 45% up, and only for the epics in view (and a margin).
     const v = this.view(), m = 200;
-    const shown = nodes.filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
+    const labels = s < 0.45 ? [] : [...g.at.values()].filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
       && (y + NH) * s >= this.oy - m && y * s <= this.oy + v.height + m);
+    const at = sel ? g.at.get(sel) : null;
+    const boxes = this.boxes ?? { fills: [], borders: [], holds: [] };
+    const paint = (path, bg) => window.paint_path(path, bg).absolute().top(0).left(0).size_full();
 
-    // Nodes are plain boxes: no id, click handler or tooltip each. Hundreds of
-    // interactive elements beside the detail panel ran the render out of time; the
-    // viewport finds the epic under a click instead (hit()).
+    // The epics are a few prebuilt paths (fill, border and hold mark, one per
+    // colour), not hundreds of elements: a render then costs the same at any
+    // zoom, which keeps panning smooth. The viewport finds the epic under a click (hit()).
     return div().relative().w(g.width * s).h(g.height * s).flex_none()
-      .children(g.bandBoxes.map(({ b, i, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
+      .children(g.bandBoxes.map(({ b, i, n, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
         .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
         // The milestone's name stays readable at any zoom.
         .child(div().absolute().left(PAD * s).top(2).text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted)
-          .child(`${b.milestone} · ${nodes.filter(a => a.n.milestone === b.milestone).length}`))))
-      .children(strokes.map(([k, path]) =>
-        window.paint_path(path, stroke[k]).absolute().top(0).left(0).size_full()))
-      .children(shown.map(({ n, x, y }) => {
-        const [color] = look(t, n, ready(n.id));
-        const on = sel === n.id;
-        return div().absolute().left(x * s).top(y * s).w(NW * s).h(NH * s).rounded(4 * s)
-          .bg(color + (n.state === "done" ? "40" : "66")).border(on ? 2 : 1).border_color(on ? t.foreground : color)
-          .px(5 * s).flex().items_center().overflow_hidden()
-          // A started epic that is also held or blocked: a mark in its corner.
-          .when(Boolean(n.hold), el => el.child(div().absolute().top(0).right(0).w(Math.max(4, 8 * s)).h_full()
-            .bg(n.hold === "held" ? t.blocked : t.dim)))
-          .when(label, el => el.child(div().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
-      }));
+          .child(`${b.milestone} · ${n}`))))
+      .children(strokes.map(([k, path]) => paint(path, stroke[k])))
+      .children(boxes.fills.map(([st, done, path]) => paint(path, Background.solid(look(t, st)[0]).opacity(done ? 0.25 : 0.4))))
+      .children(boxes.borders.map(([st, path]) => paint(path, Background.solid(look(t, st)[0]))))
+      // A started epic that is also held or blocked: a mark at its right end.
+      .children(boxes.holds.map(([hold, path]) => paint(path, Background.solid(hold === "held" ? t.blocked : t.dim))))
+      .when(Boolean(at), el => el.child(div().absolute().left(at.x * s - 1).top(at.y * s - 1).w(NW * s + 2).h(NH * s + 2)
+        .rounded(3).border(2).border_color(t.foreground)))
+      .children(labels.map(({ n, x, y }) => div().absolute().left(x * s + 5 * s).top(y * s).w((NW - 10) * s).h(NH * s)
+        .flex().items_center().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
+  }
+
+  // The epic boxes as built paths, grouped by colour: fills [status, done, path],
+  // borders [status, path], hold marks [hold, path]. At most CHUNK boxes a path.
+  buildBoxes(g, edges, s) {
+    const CHUNK = 200, nodes = [...g.at.values()];
+    const doneIds = new Set(nodes.filter(a => a.n.state === "done").map(a => a.n.id));
+    const incoming = new globalThis.Map();
+    for (const e of edges) { if (!incoming.has(e.to)) incoming.set(e.to, []); incoming.get(e.to).push(e.from); }
+    const groups = new globalThis.Map(), built = [];
+    const add = (key, make, rect) => {
+      let o = groups.get(key);
+      if (!o || o.n >= CHUNK) { o = { key, p: make(), n: 0 }; groups.set(key, o); built.push(o); }
+      o.p = o.p.add_polygon(rect, true);
+      o.n++;
+    };
+    const rect = (x0, y0, x1, y1) => [[x0 * s, y0 * s], [x1 * s, y0 * s], [x1 * s, y1 * s], [x0 * s, y1 * s]];
+    for (const { n, x, y } of nodes) {
+      const st = statusOf(n, (incoming.get(n.id) ?? []).every(f => doneIds.has(f)));
+      const done = n.state === "done";
+      const box = rect(x, y, x + NW, y + NH);
+      add(`fill|${st}|${done ? 1 : 0}`, () => PathBuilder.fill(), box);
+      add(`border|${st}`, () => PathBuilder.stroke(1), box);
+      if (n.hold) add(`hold|${n.hold}`, () => PathBuilder.fill(), rect(x + NW - Math.max(4 / s, 8), y, x + NW, y + NH));
+    }
+    const out = { fills: [], borders: [], holds: [] };
+    for (const o of built) {
+      const [kind, a, b] = o.key.split("|"), path = o.p.build();
+      if (kind === "fill") out.fills.push([a, b === "1", path]);
+      else if (kind === "border") out.borders.push([a, path]);
+      else out.holds.push([a, path]);
+    }
+    return out;
   }
 
   // The epic under a pointer event in the viewport, if any.
   hit(e) {
-    const g = this.geometry(this.scale ?? 1), s = this.scale ?? 1, p = this.local(e);
+    const g = this.layout(), s = this.scale ?? 1, p = this.local(e);
     const mx = (this.ox + p.x) / s, my = (this.oy + p.y) / s;
     for (const { n, x, y } of g.at.values()) if (mx >= x && mx <= x + NW && my >= y && my <= y + NH) return n.id;
     return null;
@@ -260,7 +298,7 @@ export default class Map extends View {
     const n = a.n, edges = this.data.edges ?? [], e = this.epics?.get(n.id) ?? {};
     const ins = edges.filter(x => x.to === n.id).map(x => x.from), outs = edges.filter(x => x.from === n.id).map(x => x.to);
     const doneIds = new Set((this.data.nodes ?? []).filter(x => x.state === "done").map(x => x.id));
-    const [color, word] = look(t, n, ins.every(f => doneIds.has(f)));
+    const [color, word] = look(t, statusOf(n, ins.every(f => doneIds.has(f))));
     const whys = (e.depends_on ?? []).filter(d => d.why).map(d => `${d.id}: ${d.why}`).join("\n\n");
     const d = {
       id: n.id, title: n.title ?? e.title, color, word: `${word}${n.hold ? ` · ${n.hold}` : ""}`,
@@ -285,7 +323,7 @@ export default class Map extends View {
 
   render() {
     const t = theme();
-    const g = this.data ? this.geometry(this.scale ?? 1) : null;
+    const g = this.layout();
     if (g) {
       // Keep the map in view: no panning past its edges.
       const s = this.scale ?? 1, view = this.view();
