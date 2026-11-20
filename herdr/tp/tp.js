@@ -354,6 +354,9 @@ export class TpView extends View {
     const tasks = this.data?.tasks ?? [];
     const count = (s) => tasks.filter(x => x.status === s).length;
     const title = f?.title || this.spec || "…";
+    const w = worked(tasks);
+    const counts = [`${count("done")} done · ${count("wip")} wip · ${count("open")} open`,
+      w && `worked ${span(w.minutes)}, started ${ago(w.since)}`].filter(Boolean).join(" · ");
     return v_flex().flex_none()
       .child(h_flex().h(34).px(8).gap(8).items_center().border_b(1).border_color(t.border)
         .child(h_flex().id("tp-pick").min_w(0).flex_1().gap(6).items_center().cursor_pointer().rounded(6).px(6).py(3)
@@ -362,7 +365,7 @@ export class TpView extends View {
           .child(div().min_w(0).truncate().text_size(12.5).text_color(t.foreground).child(title))
           .child(div().flex_none().text_size(10).text_color(t.dim).child(this.picking ? "▴" : "▾")))
         .when(tasks.length > 0, el => el.child(div().flex_none().text_size(11).text_color(t.muted)
-          .child(`${count("done")} done · ${count("wip")} wip · ${count("open")} open`))))
+          .child(counts))))
       .when(this.picking, el => el.child(this.picker(t)));
   }
 
