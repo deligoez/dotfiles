@@ -1,5 +1,6 @@
 // tp task board: one spec's tasks in four columns (Ready, In progress, Waiting, Done),
-// read-only and live. Opened from the tab bar's Board button; see ./tp.js.
+// read-only and live; click a card for the task's details. Opened from the tab
+// bar's Board button; see ./tp.js.
 import { div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { TpView, classify, card, laneColor } from "./tp.js";
@@ -19,15 +20,15 @@ export default class Board extends TpView {
       .child(div().text_size(11.5).text_color(t.muted).child(label))
       .child(div().text_size(11).text_color(t.dim).child(String(n)));
     // Side by side when there is room, else one column under the other.
-    const wide = this.size.width >= 640;
+    const wide = this.bodyWidth() >= 640;
     if (!wide) return v_flex().id("board").flex_1().min_h(0).overflow_y_scroll().p(10).gap(14)
       .children(LANES.map(([id, label]) => { const list = lane(id); return v_flex().gap(6)
-        .child(head(id, label, list.length)).children(list.map(x => card(t, x))); }));
+        .child(head(id, label, list.length)).children(list.map(x => card(t, x, { view: this }))); }));
     return h_flex().flex_1().min_h(0).p(10).gap(10).items_start()
       .children(LANES.map(([id, label]) => { const list = lane(id); return v_flex().id(`lane-${id}`).flex_1().min_w(0).h_full().gap(6)
         .child(head(id, label, list.length))
         .child(v_flex().id(`lane-body-${id}`).flex_1().min_h(0).overflow_y_scroll().gap(6)
-          .children(list.map(x => card(t, x)))
+          .children(list.map(x => card(t, x, { view: this })))
           .when(!list.length, el => el.child(div().text_size(11).text_color(t.dim).px(2).child("—")))); }));
   }
 }
