@@ -99,6 +99,9 @@ function agentTitle(tab, l) {
   return (tab.name === prog || !tab.named) && telling ? live : tab.name;
 }
 
+// Foreground programs that mean the agent has gone and its shell is back.
+const SHELLS = new Set(["fish", "zsh", "bash", "sh", "dash", "ksh", "tcsh", "csh", "nu", "pwsh", "login"]);
+
 function programIcon(p, size, color) {
   if (!p?.icon) return null;
   return p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();
@@ -152,6 +155,33 @@ export default class Spaces extends View {
     cx.timer.every(15000, cx => this.refreshMachines(cx));
     // Refresh only when the refs could have changed (see `due`).
     cx.timer.every(250, (cx) => this.checkNew(cx));
+    this.silent = new Set(); // terminals running an agent that doesn't report a status
+    cx.timer.every(5000, (cx) => this.checkSilent(cx));
+  }
+
+  // Claude Code asks the terminal at start whether it may report a status (OSC 7501
+  // ; ?) and waits 2 s; with no answer in time (a busy machine) it never reports,
+  // and the agent is missing from agents(). Such a pane keeps the `app` of an
+  // earlier report but has no status, as does one whose agent has exited, so the
+  // terminal's foreground program tells them apart: anything but a shell is the agent.
+  async checkSilent(cx) {
+    if (this.silentBusy) return;
+    const candidates = panes().filter((p) => p.terminal && !p.terminal.includes("/") && p.app && !p.status);
+    if (!candidates.length && !this.silent.size) return;
+    this.silentBusy = true;
+    try {
+      const found = new Set();
+      await Promise.all(candidates.map(async (p) => {
+        try {
+          const r = await hc(["get", p.terminal, "--json"]);
+          const name = r.code === 0 ? JSON.parse(r.stdout).foreground?.name : null;
+          if (name && !SHELLS.has(name.replace(/^-/, ""))) found.add(p.terminal);
+        } catch {}
+      }));
+      const changed = found.size !== this.silent.size || [...found].some((t) => !this.silent.has(t));
+      this.silent = found;
+      if (changed) cx.notify();
+    } finally { this.silentBusy = false; }
   }
 
   checkNew(cx) {
@@ -501,9 +531,20 @@ export default class Spaces extends View {
 
   // One read of agents, panes and tabs per render: every host read copies its whole list.
   prepareAgents() {
-    const list = agents();
-    const leads = leadPanes(panes());
-    const tabs = new Map(spaces().flatMap((s) => s.tabs ?? []).map((tab) => [tab.id, tab]));
+    const list = [...agents()];
+    const all = panes();
+    const leads = leadPanes(all);
+    const sp = spaces();
+    const tabs = new Map(sp.flatMap((s) => s.tabs ?? []).map((tab) => [tab.id, tab]));
+    // Agents that don't report a status (see checkSilent), listed with no state.
+    if (this.silent?.size) {
+      const spaceOf = new Map(sp.flatMap((s) => (s.tabs ?? []).map((tab) => [tab.id, s.id])));
+      const listed = new Set(list.map((a) => a.pane));
+      for (const p of all) {
+        if (!this.silent.has(p.terminal) || p.status || listed.has(p.pane)) continue;
+        list.push({ address: p.terminal, pane: p.pane, space: spaceOf.get(p.tab), tab: p.tab, status: null, app: p.app, program: p.program, title: p.title, focused: p.focused });
+      }
+    }
     const perTab = new Map();
     for (const a of list) perTab.set(a.tab, (perTab.get(a.tab) ?? 0) + 1);
     const bySpace = new Map();
