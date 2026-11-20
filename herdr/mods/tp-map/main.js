@@ -1,13 +1,13 @@
 // tp epics map: the project's epic graph as tp's dashboard lays it out
 // (`tp epic layout --json`: one band per milestone, epics by layer and column,
 // dependency curves, the critical path), read-only and live. Pinch (or Cmd/Ctrl and
-// the wheel, or − / + / Fit) zooms, two fingers pan; click an epic to light up its
+// the wheel, or − / + / Fit) zooms, two fingers or a press and drag pan; click an epic to light up its
 // dependencies and read it (description, acceptance, why it waits) in a panel.
 // Opened from the tab bar's Epics button; see ./tp.js.
 import { View, div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { theme, settings, props, watchFolder, checking, exec } from "herdr";
-import { tp, MONO, detailPanel, panelBox } from "./tp.js";
+import { tp, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
@@ -306,10 +306,12 @@ export default class Map extends View {
       .child(this.withDetail(t, g, !g ? v_flex().flex_1().items_center().justify_center().px(20).text_size(12.5).text_color(t.muted)
           .child(this.error ?? "Loading the epic map…")
         // Our own viewport, so a zoom can keep the point under the fingers in place:
-        // a pinch (or Cmd/Ctrl and the wheel) zooms there, two fingers or the wheel pan.
-        : div().id("map-view").flex_1().min_h(0).relative().overflow_hidden()
-          // A click selects the epic under it (again: clears it), or clears on empty space.
-          .on_mouse_up("left", (e, cx) => { const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx); cx.notify(); })
+        // a pinch (or Cmd/Ctrl and the wheel) zooms there; two fingers, the wheel or
+        // a press and drag pan. A click (no drag) selects the epic under it (again:
+        // clears it), or clears on empty space.
+        : dragPan(div().id("map-view").flex_1().min_h(0).relative().overflow_hidden(), this,
+            (dx, dy) => { this.ox -= dx; this.oy -= dy; },
+            (e, cx) => { const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx); })
           .on_pinch((e, cx) => { const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
             cx.stop_propagation();
