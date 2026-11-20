@@ -127,7 +127,7 @@ export function dragPan(el, view, apply, click) {
       const dx = (e.position.x - d.x) / zoom(), dy = (e.position.y - d.y) / zoom();
       if (!d.moved && Math.hypot(dx, dy) < 4) return;
       d.moved = view.dragMoved = true;
-      apply(dx - d.dx, dy - d.dy);
+      apply(dx - d.dx, dy - d.dy, cx);
       d.dx = dx; d.dy = dy;
       cx.notify();
     })
