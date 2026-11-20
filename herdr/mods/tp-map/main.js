@@ -24,6 +24,29 @@ function curve(p, g, a, b) {
   return p.move_to(X(x0), Y(y0)).cubic_bezier_to(X(x1), Y(y1), X(x0), Y(y0 + bend), X(x1), Y(y1 - bend));
 }
 
+// The same curve as `n` straight pieces: n + 1 points, in layout units.
+function polyline(a, b, n) {
+  const x0 = a.x + NW / 2, y0 = a.y + NH, x1 = b.x + NW / 2, y1 = b.y;
+  const bend = Math.max(10, Math.abs(y1 - y0) / 2), ay = y0 + bend, by = y1 - bend;
+  const pts = [[x0, y0]];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    const x = (u * u * u + 3 * u * u * t) * x0 + (3 * u * t * t + t * t * t) * x1;
+    const y = u * u * u * y0 + 3 * u * u * t * ay + 3 * u * t * t * by + t * t * t * y1;
+    pts.push([x, y]);
+  }
+  return pts;
+}
+
+// How finely the curves are cut, by zoom: the first of these at or above the
+// scale. Each level is built once, on first use.
+const LODS = [0.25, 0.5, 1, 2];
+const lodOf = (s) => LODS.find(r => r >= s) ?? 2;
+// The edges are cut into square cells (layout units); a render paints only the
+// cells in view. A frame's cost grows with the straight pieces it paints, and
+// 3671 curves drawn whole held a big map at about 28 fps while panning.
+const CELL = 800;
+
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
 // all done counts as ready.
@@ -155,6 +178,24 @@ export default class Map extends View {
     return { x: p.x / z, y: p.y / z };
   }
 
+  // While the map pans or zooms, its edges are drawn coarse (three straight
+  // pieces a curve), which keeps a frame within budget; 150 ms after the last
+  // move they are drawn in full again.
+  moved(cx) {
+    this.movedAt = Date.now();
+    this.moving = true;
+    if (this.settling) return;
+    this.settling = true;
+    const check = (cx) => {
+      if (Date.now() - this.movedAt < 150) { cx.timer.after(60, check); return; }
+      this.settling = false;
+      this.moving = false;
+      this.refresh();
+      cx.notify();
+    };
+    cx.timer.after(160, check);
+  }
+
   // Scale by k around (px, py) in the visible area, so that point stays put.
   zoomAt(k, px, py) {
     const s = this.scale ?? 1, next = Math.max(0.15, Math.min(2, s * k)), r = next / s;
@@ -182,6 +223,10 @@ export default class Map extends View {
     if (this.scale == null) { if (!this.sized) return; this.scale = this.fit(this.geometry()); }
     const qs = this.gscale(this.scale), b = this.built;
     if (!b || b.data !== this.data || b.qs !== qs) this.built = this.build(qs);
+    const lod = lodOf(this.scale), lods = this.built.lods;
+    // A level not built yet waits for the map to stop: a pinch draws coarse.
+    if (!lods.has(lod) && !this.moving) lods.set(lod, this.buildStrokes(this.built.g, this.data.edges ?? [], lod));
+    if (!lods.has("fast")) lods.set("fast", this.buildStrokes(this.built.g, this.data.edges ?? [], 0, 3));
     const sel = this.selected;
     if (this.chosenFor !== sel || this.chosenOf !== this.built) {
       this.chosenFor = sel; this.chosenOf = this.built;
@@ -206,7 +251,7 @@ export default class Map extends View {
     const claimed = nodes.filter(n => ["claimed", "specced", "in_progress"].includes(n.state)).length;
     return {
       data: d, qs, g, ins, outs, doneIds, counts: { done: doneIds.size, claimed },
-      strokes: this.buildStrokes(g, edges), boxes: this.buildBoxes(g, ins, doneIds, qs),
+      lods: new globalThis.Map(), boxes: this.buildBoxes(g, ins, doneIds, qs),
     };
   }
 
@@ -240,15 +285,24 @@ export default class Map extends View {
     const edges = this.data.edges ?? [];
     const sel = this.selected;
 
-    // Edges by kind: plain, critical, and the selected epic's. One path holds at
-    // most CHUNK curves: a single path with thousands of them doesn't draw.
-    // They are built in refresh(), outside render: a render that built them beside
-    // another busy pane ran out of time ("interrupted").
-    const strokes = [...(this.built?.strokes ?? []), ...(this.chosen ? [["chosen", this.chosen]] : [])];
+    // Edges by kind: plain, critical, and the selected epic's, built in refresh()
+    // (outside render: a render that built them beside another busy pane ran out
+    // of time, "interrupted"). Only the edge cells that reach into the view are
+    // painted, plain first so the critical ones draw on top, then the selected
+    // epic's; while the map moves, at the coarse level.
+    const v = this.view(), m = 200;
+    const vx0 = this.ox / s, vy0 = this.oy / s, vx1 = (this.ox + v.width) / s, vy1 = (this.oy + v.height) / s;
+    const lods = this.built?.lods;
+    const cells = (this.moving && lods?.get("fast")) || lods?.get(lodOf(s)) || lods?.get("fast") || [];
+    const plain = [], critical = [];
+    for (const c of cells) {
+      if (c.x1 < vx0 || c.x0 > vx1 || c.y1 < vy0 || c.y0 > vy1) continue;
+      for (const kp of c.paths) (kp[0] === "critical" ? critical : plain).push(kp);
+    }
+    const strokes = [...plain, ...critical, ...(this.chosen ? [["chosen", this.chosen]] : [])];
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
     const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
     // Labels only from 45% up, and only for the epics in view (and a margin).
-    const v = this.view(), m = 200;
     const labels = s < 0.45 ? [] : [...g.at.values()].filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
       && (y + NH) * s >= this.oy - m && y * s <= this.oy + v.height + m);
     const at = sel ? g.at.get(sel) : null;
@@ -315,22 +369,37 @@ export default class Map extends View {
     return null;
   }
 
-  // The edge curves as built paths, [kind, path], plain first so the critical
-  // ones draw on top. One path holds at most CHUNK curves.
-  buildStrokes(g, edges) {
-    const CHUNK = 200, width = { plain: 1, critical: 1.6 };
-    const strokes = [];
-    const open = {};
+  // The edges at one level of detail, cut into cells: each curve becomes about
+  // one straight piece per 40 screen px (at the level's scale), and each piece
+  // goes to the cell its middle is in. A cell keeps the box its pieces cover,
+  // for the view test, and its paths as [kind, path]; at most CHUNK pieces a path.
+  // `pieces`, when given, is the count for every curve (the in-motion level).
+  buildStrokes(g, edges, lod, pieces) {
+    const CHUNK = 1500, width = { plain: 1, critical: 1.6 };
+    const X = pctX(g), Y = pctY(g), cells = new globalThis.Map();
     for (const e of edges) {
       const a = g.at.get(e.from), b = g.at.get(e.to);
       if (!a || !b) continue;
       const kind = e.critical ? "critical" : "plain";
-      if (!open[kind] || open[kind].n >= CHUNK) { open[kind] = { p: PathBuilder.stroke(width[kind]), n: 0 }; strokes.push([kind, open[kind]]); }
-      open[kind].p = curve(open[kind].p, g, a, b);
-      open[kind].n++;
+      const len = Math.hypot(b.x - a.x, b.y - a.y - NH) * lod;
+      const pts = polyline(a, b, pieces ?? Math.max(2, Math.min(24, Math.ceil(len / 40))));
+      for (let i = 1; i < pts.length; i++) {
+        const [px, py] = pts[i - 1], [qx, qy] = pts[i];
+        const key = `${Math.floor((px + qx) / 2 / CELL)},${Math.floor((py + qy) / 2 / CELL)}`;
+        let c = cells.get(key);
+        if (!c) cells.set(key, c = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, open: {}, done: [] });
+        c.x0 = Math.min(c.x0, px, qx); c.x1 = Math.max(c.x1, px, qx);
+        c.y0 = Math.min(c.y0, py, qy); c.y1 = Math.max(c.y1, py, qy);
+        let o = c.open[kind];
+        if (!o || o.n >= CHUNK) { o = c.open[kind] = { p: PathBuilder.stroke(width[kind]), n: 0, last: null }; c.done.push([kind, o]); }
+        // A piece that goes on from the last one in this path continues the line.
+        if (o.last !== pts[i - 1]) o.p = o.p.move_to(X(px), Y(py));
+        o.p = o.p.line_to(X(qx), Y(qy));
+        o.last = pts[i];
+        o.n++;
+      }
     }
-    strokes.sort((x, y) => (x[0] === "critical") - (y[0] === "critical"));
-    return strokes.map(([k, o]) => [k, o.p.build()]);
+    return [...cells.values()].map(c => ({ x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1, paths: c.done.map(([k, o]) => [k, o.p.build()]) }));
   }
 
   // The selected epic's curves, in and out: one small path drawn over the rest.
@@ -381,7 +450,7 @@ export default class Map extends View {
       this.ox = Math.max(0, Math.min(this.ox, g.width * s - view.width));
       this.oy = Math.max(0, Math.min(this.oy, g.height * s - view.height));
     }
-    return v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground)
+    const root = v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground).relative()
       // Reported in window pixels; the layout's px are scaled by the app's zoom.
       .on_size_change((size, cx) => {
         const z = Number(settings()?.zoom) || 1;
@@ -399,17 +468,19 @@ export default class Map extends View {
         // a press and drag pan. A click (no drag) selects the epic under it (again:
         // clears it), or clears on empty space.
         : dragPan(div().id("map-view").flex_1().min_h(0).relative().overflow_hidden(), this,
-            (dx, dy) => { this.ox -= dx; this.oy -= dy; },
+            (dx, dy, cx) => { this.ox -= dx; this.oy -= dy; this.moved(cx); },
             (e, cx) => { const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx); })
-          .on_pinch((e, cx) => { const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
+          .on_pinch((e, cx) => { this.moved(cx); const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
             cx.stop_propagation();
+            this.moved(cx);
             const d = e.delta_lines ? { x: e.delta_lines.x * 40, y: e.delta_lines.y * 40 } : e.delta;
             if (e.modifiers?.platform || e.modifiers?.control) { const p = this.local(e); this.zoomAt(Math.exp(d.y / 300), p.x, p.y); }
             else { this.ox -= d.x; this.oy -= d.y; }
             cx.notify();
           })
           .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy))));
+    return root;
   }
 
   // The map, and beside or under it the selected epic.
