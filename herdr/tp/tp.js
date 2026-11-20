@@ -11,13 +11,28 @@ import { exec, home, theme, settings, shared, setShared, props, watchFolder, che
 
 export const MONO = "Menlo";
 
-// tp lives in ~/go/bin, which a GUI app's PATH may not have.
-export async function tp(args, cwd) {
+// tp lives in ~/go/bin, which a GUI app's PATH may not have. tpRaw answers the
+// output as text, so a caller can skip the parse when nothing changed.
+export async function tpRaw(args, cwd) {
   let r;
   try { r = await exec("tp", args, { cwd, timeout: 60000 }); }
   catch { r = await exec(`${home()}/go/bin/tp`, args, { cwd, timeout: 60000 }); }
   if (r.code !== 0) throw new Error((r.stderr || r.stdout || `tp exited ${r.code}`).trim().split("\n")[0]);
-  return JSON.parse(r.stdout);
+  return r.stdout;
+}
+export const tp = async (args, cwd) => JSON.parse(await tpRaw(args, cwd));
+
+// Runs `load` one at a time: a call while one runs is kept and runs once after it
+// (a burst of watch events is one reload, and the last change is never missed).
+export function serial(load) {
+  let running = false, again = false;
+  const run = async (...a) => {
+    if (running) { again = true; return; }
+    running = true;
+    try { await load(...a); } finally { running = false; }
+    if (again) { again = false; await run(...a); }
+  };
+  return run;
 }
 
 export const ago = (iso) => {
