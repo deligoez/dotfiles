@@ -5,6 +5,8 @@
 // terminal is in now, only where unusual, and ahead/behind; no branch (Claude Code's
 // status line shows it). Click a space to
 // switch, an agent to focus its pane; right-click a space for its menu, drag to reorder.
+// A space can be put aside (the box that shows on hover): it leaves the list for a
+// folded "Aside" section at the bottom, which still flags an agent waiting or done.
 
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle } from "gpui-base";
@@ -13,6 +15,10 @@ import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, sha
 // Spaces whose agents are folded away, by id; kept in shared state so it survives restarts.
 const FOLDED = "space-agents.folded";
 const folded = () => shared(FOLDED) ?? [];
+// Spaces put aside, by id: out of the list, gathered in a folded section at its bottom.
+const ASIDE = "space-agents.aside";
+const aside = () => shared(ASIDE) ?? [];
+const ASIDE_OPEN = "space-agents.aside-open";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -122,6 +128,14 @@ function foldedStatus(t, mine) {
   const has = (s) => mine.some((m) => m.a.status === s);
   if (has("blocked")) return div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked);
   if (has("working")) return agentStatus(t, "working");
+  if (has("done")) return agentStatus(t, "done");
+  return div().flex_none();
+}
+
+// The aside section, folded, speaks up only for what needs you: an agent waiting, or done.
+function asideStatus(t, mine) {
+  const has = (s) => mine.some((m) => m.a.status === s);
+  if (has("blocked")) return div().size(7).mx(3).flex_none().rounded(4).bg(t.blocked);
   if (has("done")) return agentStatus(t, "done");
   return div().flex_none();
 }
@@ -426,9 +440,49 @@ export default class Spaces extends View {
     return out.filter(r => this.shown.has(r.w.id));
   }
 
+  // The rows that stay in the list; the ones put aside go to `this.away`. A main
+  // checkout's worktrees go with it, and a worktree put aside alone loses its branch glyph.
+  split(rows) {
+    const ids = new Set(aside());
+    const kept = [], away = [];
+    let lead = false;
+    for (const r of rows) {
+      if (!r.tree) { lead = ids.has(r.w.id); (lead ? away : kept).push(r); }
+      else if (lead) away.push(r);
+      else if (ids.has(r.w.id)) away.push({ ...r, tree: null });
+      else kept.push(r);
+    }
+    this.away = away;
+    return kept;
+  }
+
+  // Put a space aside, or bring it back.
+  toggleAside(id, cx) {
+    const ids = aside();
+    setShared(ASIDE, ids.includes(id) ? ids.filter((a) => a !== id) : [...ids, id]);
+    this.hot = null;
+    cx.notify();
+  }
+
+  // The folded section at the list's bottom: "Aside (n)", opened by a click.
+  asideSection(t) {
+    const open = shared(ASIDE_OPEN) ?? false;
+    const mine = this.away.flatMap((r) => this.agentsBySpace?.get(r.w.id) ?? []);
+    const head = h_flex().id("aside").h(28).flex_none().px(8).gap(9).items_center().rounded(7)
+      .text_size(11.5).text_color(t.dim).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground))
+      .on_click((_e, cx) => { setShared(ASIDE_OPEN, !open); cx.notify(); })
+      .child(svg("mods/workspace-chrome/archive.svg").size(13).flex_none())
+      .child(div().flex_1().child(`Aside (${this.away.length})`))
+      .when(!open, (el) => el.child(asideStatus(t, mine)))
+      .child(svg(`mods/workspace-chrome/chevron-${open ? "down" : "right"}.svg`).size(11).flex_none());
+    return v_flex().flex_none().px(8).pt(4).pb(6).border_t_1().border_color(t.border)
+      .child(head)
+      .when(open, (el) => el.children(this.away.map((r) => this.row(r, t))));
+  }
+
   // The rows, under a header per machine once one isn't this computer.
   grouped(t, collapsed) {
-    const rows = this.ordered();
+    const rows = this.split(this.ordered());
     const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t));
     // Where the active space's row lands among the children this returns: the list scrolls by its direct
     // children, and machine headers, login notes and loading rows count too.
@@ -621,8 +675,28 @@ export default class Spaces extends View {
       .child(svg(`mods/workspace-chrome/chevron-${shut ? "right" : "down"}.svg`).size(13));
   }
 
+  // Shown while the pointer is on a space row, and always on one put aside (to bring it back).
+  asideButton(id, back, t) {
+    return div()
+      .id(`aside-${id}`)
+      .size(18)
+      .flex_none()
+      .flex()
+      .items_center()
+      .justify_center()
+      .rounded(5)
+      .text_color(t.dim)
+      .hover((s) => s.bg(t.hover).text_color(t.foreground))
+      .tooltip(back ? "Bring back" : "Put aside")
+      .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+      .on_click((_e, cx) => { cx.stop_propagation(); this.toggleAside(id, cx); })
+      .child(svg("mods/workspace-chrome/archive.svg").size(13));
+  }
+
   spaceRow({ w, i, g, tree }, t) {
     const on = w.active;
+    const back = aside().includes(w.id);
+    const away = this.away?.some((r) => r.w.id === w.id);
     const fromIndex = this.pressed === null ? -1 : spaces().findIndex(s => s.id === this.pressed);
     const colors = shared("space.colors") ?? {};
     const color = colors[w.id] ?? "ansi6";
@@ -667,6 +741,10 @@ export default class Spaces extends View {
         cx.notify();
       })
       .on_mouse_down("right", () => this.menu(w))
+      .on_hover((hovered, cx) => {
+        const hot = hovered ? w.id : this.hot === w.id ? null : this.hot;
+        if (hot !== this.hot) { this.hot = hot; cx.notify(); }
+      })
       .child(
         h_flex()
           .gap(9)
@@ -675,6 +753,7 @@ export default class Spaces extends View {
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_initial().min_w(SIDE_MIN).truncate().text_color(t.foreground).child(w.name))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1())
+          .when(back || (this.hot === w.id && !away), el => el.child(this.asideButton(w.id, back, t)))
           .when(folded().includes(w.id), el => el.child(foldedStatus(t, this.agentsBySpace?.get(w.id) ?? [])))
           .when(Boolean(this.agentsBySpace?.get(w.id)?.length), el => el.child(this.foldButton(w.id, t))),
       );
@@ -731,6 +810,7 @@ export default class Spaces extends View {
         .on_size_change((_size, cx) => { if (this.activeAt >= 0) { this.scroll.scroll_to_item(this.activeAt); cx.notify(); } })
         .on_mouse_up("left", (_e, cx) => { this.pressed = null; cx.notify(); })
         .children(list))
+      .when(!collapsed && this.away.length > 0, (el) => el.child(this.asideSection(t)))
       .when(collapsed, (el) => el.child(h_flex().h(28).flex_none().items_center().justify_center()
         .child(div().id("collapse").text_size(13).text_color(t.dim).hover((s) => s.text_color(t.foreground)).on_click(toggleSidebar).child("»"))));
   }
