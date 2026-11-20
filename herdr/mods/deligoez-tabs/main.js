@@ -3,7 +3,8 @@ import { h_flex, ScrollHandle } from "gpui-base";
 import { spaces, panes, focused, exec, run, openOverlay, theme, window, shared, layout, settings, checking } from "herdr";
 
 // tp views (our tp-map, tp-board and tp-steps mods), offered when the focused
-// folder's repo has tp specs: [mod, label, icon, needs .tp/epics.json].
+// folder's repo has what each one draws: [mod, label, icon, true = needs only
+// .tp/epics.json, false = needs a *.tasks.json].
 const TP_VIEWS = [
   ["tp-map", "Epics", "mods/tp-map/map.svg", true],
   ["tp-board", "Board", "mods/tp-board/board.svg", false],
@@ -210,7 +211,7 @@ export default class Tabs extends View {
         .on_size_change((_size, cx) => { if (active >= 0) { this.scroll.scroll_to_item(active); cx.notify(); } })
         .children(shown.map(item)))
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
-      .when(Boolean(tp?.specs), el => el.children(TP_VIEWS.filter(v => !v[3] || tp.epics).map(tpButton)))
+      .when(Boolean(tp?.specs || tp?.epics), el => el.children(TP_VIEWS.filter(v => v[3] ? tp.epics : tp.specs).map(tpButton)))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/deligoez-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
