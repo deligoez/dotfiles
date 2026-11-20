@@ -2,12 +2,12 @@
 // (`tp epic layout --json`: one band per milestone, epics by layer and column,
 // dependency curves, the critical path), read-only and live. Pinch (or Cmd/Ctrl and
 // the wheel, or − / + / Fit) zooms, two fingers pan; click an epic to light up its
-// dependencies and see it in the bar below.
+// dependencies and read it (description, acceptance, why it waits) in a panel.
 // Opened from the tab bar's Epics button; see ./tp.js.
 import { View, div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { theme, settings, props, watchFolder, checking } from "herdr";
-import { tp, MONO } from "./tp.js";
+import { theme, settings, props, watchFolder, checking, exec } from "herdr";
+import { tp, MONO, detailPanel, panelBox } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
@@ -69,6 +69,8 @@ export default class Map extends View {
     cx.spawn(async (cx) => {
       try {
         this.data = await tp(["epic", "layout", "--json"], this.root);
+        this.epics = new globalThis.Map();   // the graph file may have changed
+        if (this.selected) this.fetchEpic(this.selected, cx);
         this.refresh();
         this.error = null;
       } catch (e) {
@@ -78,6 +80,28 @@ export default class Map extends View {
       this.loading = false;
       cx.notify();
     });
+  }
+
+  // The layout carries no text: the selected epic's description, acceptance and
+  // the why of each dependency come from the graph file, one epic at a time
+  // through jq. A big project's file is megabytes: parsing it here held up the
+  // views' renders ("interrupted").
+  fetchEpic(id, cx) {
+    if (this.epics?.has(id)) return;
+    const args = ["-c", "--arg", "id", id, ".epics[] | select(.id == $id) | {description, acceptance, tags, condition, depends_on}", `${this.root}/.tp/epics.json`];
+    cx.spawn(async (cx) => {
+      let r;
+      try { r = await exec("jq", args); } catch { try { r = await exec("/opt/homebrew/bin/jq", args); } catch { return; } }
+      try { this.epics.set(id, JSON.parse(r.stdout.trim().split("\n")[0] || "{}")); } catch { return; }
+      cx.notify();
+    });
+  }
+
+  // Select an epic (or nothing) and fetch its text.
+  select(id, cx) {
+    this.selected = id;
+    if (id) this.fetchEpic(id, cx);
+    this.refresh();
   }
 
   // Where everything goes at scale 1: rows by layer, a header above each milestone band.
@@ -95,8 +119,12 @@ export default class Map extends View {
     return { at, width, height, bandBoxes };
   }
 
-  // The map's visible area: the pane under the header (and the detail bar).
-  view() { return { width: this.size.width, height: this.size.height - 34 - (this.selected ? 90 : 0) }; }
+  // The map's visible area: the pane under the header, less the detail panel.
+  pane() { return { width: this.size.width, height: this.size.height - 34 }; }
+  view() {
+    const p = this.pane(), box = this.selected ? panelBox(p) : null;
+    return !box ? p : box.side ? { width: p.width - box.w, height: p.height } : { width: p.width, height: p.height - box.h };
+  }
 
   // Where a pointer event is in the visible area, in layout px.
   local(e) {
@@ -213,23 +241,34 @@ export default class Map extends View {
     return strokes.map(([k, o]) => [k, o.p.build()]);
   }
 
-  // The selected epic: what it is and what it waits on and frees.
+  // The selected epic: what it is, why it waits on what, and what it frees.
   detail(t, g) {
     const a = g.at.get(this.selected);
     if (!a) return null;
-    const n = a.n, edges = this.data.edges ?? [];
-    const ins = edges.filter(e => e.to === n.id).map(e => e.from), outs = edges.filter(e => e.from === n.id).map(e => e.to);
+    const n = a.n, edges = this.data.edges ?? [], e = this.epics?.get(n.id) ?? {};
+    const ins = edges.filter(x => x.to === n.id).map(x => x.from), outs = edges.filter(x => x.from === n.id).map(x => x.to);
     const doneIds = new Set((this.data.nodes ?? []).filter(x => x.state === "done").map(x => x.id));
     const [color, word] = look(t, n, ins.every(f => doneIds.has(f)));
-    return v_flex().flex_none().border_t(1).border_color(t.border).bg(t.raised).px(12).py(8).gap(3)
-      .child(h_flex().gap(8).items_center()
-        .child(div().size(8).rounded(4).bg(color))
-        .child(div().font_family(MONO).text_size(11.5).text_color(t.foreground).child(n.id))
-        .child(div().text_size(11).text_color(t.muted).child(`${word}${n.hold ? ` · ${n.hold}` : ""} · ${n.milestone}`))
-        .when(Boolean(downstream(n)), el => el.child(div().text_size(11).text_color(t.dim).child(downstream(n)))))
-      .child(div().text_size(12.5).text_color(t.foreground).child(n.title ?? ""))
-      .child(div().text_size(11).text_color(t.muted).truncate()
-        .child(`after: ${ins.length ? ins.join(", ") : "nothing"}   ·   frees: ${outs.length ? outs.join(", ") : "nothing"}`));
+    const whys = (e.depends_on ?? []).filter(d => d.why).map(d => `${d.id}: ${d.why}`).join("\n\n");
+    const d = {
+      id: n.id, title: n.title ?? e.title, color, word: `${word}${n.hold ? ` · ${n.hold}` : ""}`,
+      meta: [
+        [n.milestone, (e.tags ?? []).length ? e.tags.join(", ") : null, e.condition ? "condition" : null].filter(Boolean).join(" · "),
+        downstream(n),
+      ].filter(Boolean),
+      links: [["After", ins], ["Frees", outs]],
+      sections: [["Description", e.description], ["Acceptance", e.acceptance], ["Why it waits", whys]],
+    };
+    // A linked epic is selected and brought to the middle of the view.
+    const pick = (id, cx) => {
+      const b = g.at.get(id);
+      if (!b) return;
+      const s = this.scale ?? 1, v = this.view();
+      this.ox = (b.x + NW / 2) * s - v.width / 2;
+      this.oy = (b.y + NH / 2) * s - v.height / 2;
+      this.select(id, cx);
+    };
+    return detailPanel(t, this.pane(), d, pick, () => { this.selected = null; this.refresh(); });
   }
 
   render() {
@@ -252,7 +291,7 @@ export default class Map extends View {
         cx.notify();
       })
       .child(this.header(t, g))
-      .child(!g ? v_flex().flex_1().items_center().justify_center().px(20).text_size(12.5).text_color(t.muted)
+      .child(this.withDetail(t, g, !g ? v_flex().flex_1().items_center().justify_center().px(20).text_size(12.5).text_color(t.muted)
           .child(this.error ?? "Loading the epic map…")
         // Our own viewport, so a zoom can keep the point under the fingers in place:
         // a pinch (or Cmd/Ctrl and the wheel) zooms there, two fingers or the wheel pan.
@@ -265,7 +304,17 @@ export default class Map extends View {
             else { this.ox -= d.x; this.oy -= d.y; }
             cx.notify();
           })
-          .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy)))
-      .when(Boolean(g && this.selected), el => el.child(this.detail(t, g)));
+          .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy))));
+  }
+
+  // The map, and beside or under it the selected epic.
+  withDetail(t, g, map) {
+    const panel = g && this.selected ? this.detail(t, g) : null;
+    if (!panel) return map;
+    // h_flex centres its children: stretch them, or the map gets no height.
+    const side = panelBox(this.pane()).side;
+    return (side ? h_flex().items_stretch() : v_flex()).flex_1().min_h(0).min_w(0)
+      .child(v_flex().flex_1().min_h(0).min_w(0).child(map))
+      .child(panel);
   }
 }
