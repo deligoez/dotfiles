@@ -1,11 +1,11 @@
 // tp task steps: one spec's tasks in dependency order, read-only and live.
 // Step N holds the tasks whose latest dependency is in step N-1; lines join
-// each task to the ones it waits on. A pinch (or Cmd/Ctrl and the wheel) zooms;
-// click a card for the task's details.
+// each task to the ones it waits on. A pinch (or Cmd/Ctrl and the wheel) zooms,
+// a press and drag scrolls; click a card for the task's details.
 // Opened from the tab bar's Steps button; see ./tp.js.
 import { div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { TpView, classify, steps, card, laneColor } from "./tp.js";
+import { TpView, classify, steps, card, laneColor, dragPan, panelBox } from "./tp.js";
 
 const zoomBy = (view, k) => { view.zoom = Math.max(0.5, Math.min(1.6, (view.zoom ?? 1) * k)); };
 
@@ -42,15 +42,21 @@ export default class Steps extends TpView {
       lines.set(color, p.move_to(x0, y0).cubic_bezier_to(x1, y1, x0, y0 + bend, x1, y1 - bend));
     }
 
-    return v_flex().id("steps").flex_1().min_h(0).overflow_y_scroll()
+    // Scrolled by us, not by gpui, so a press and drag can move it too: the wheel
+    // or two fingers scroll, Cmd/Ctrl and the wheel zoom. Kept within the content.
+    const box = this.selected ? panelBox({ width: this.size.width, height: this.size.height - 34 }) : null;
+    const viewH = this.size.height - 34 - (box && !box.side ? box.h : 0);
+    this.sy = Math.max(0, Math.min(this.sy ?? 0, height - viewH));
+    return dragPan(div().id("steps").flex_1().min_h(0).relative().overflow_hidden(), this, (_dx, dy) => { this.sy -= dy; })
       .on_pinch((e, cx) => { zoomBy(this, 1 + e.delta); cx.notify(); })
       .on_scroll_wheel((e, cx) => {
-        if (!(e.modifiers?.platform || e.modifiers?.control)) return;
         cx.stop_propagation();
-        zoomBy(this, Math.exp((e.delta_lines ? e.delta_lines.y * 40 : e.delta.y) / 300));
+        const dy = e.delta_lines ? e.delta_lines.y * 40 : e.delta.y;
+        if (e.modifiers?.platform || e.modifiers?.control) zoomBy(this, Math.exp(dy / 300));
+        else this.sy -= dy;
         cx.notify();
       })
-      .child(div().relative().w_full().h(height).flex_none()
+      .child(div().absolute().left(0).top(-this.sy).w_full().h(height)
         .children([...lines].map(([color, p]) =>
           window.paint_path(p.build(), Background.solid(color).opacity(0.45)).absolute().top(0).left(0).size_full()))
         .children(heads.map(h => h_flex().absolute().left(PAD).top(h.y).h(HEAD_H - 6).gap(8).items_center()
