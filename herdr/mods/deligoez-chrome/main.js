@@ -64,7 +64,9 @@ export default class DeligoezChrome extends View {
         .when(macos && !lights, el => el.child(logo()))
         .when(!macos, el => el.items_center().pt(0).child(this.button("sidebar-toggle", svg("mods/workspace-chrome/sidebar.svg").size(15), toggleSidebar)));
     }
-    return h_flex().size_full().bg(t.chrome).pl(14).pr(10).gap(4).items_center().text_size(13.5)
+    // pl(17): the logo's leftmost ink lines up with the "Projects" heading below
+    // (space-agents' pl(16) plus the P's side bearing), measured in a screenshot.
+    return h_flex().size_full().bg(t.chrome).pl(17).pr(10).gap(4).items_center().text_size(13.5)
       .when(lights, el => el.pl(76))
       // Pinned to the top-left gap the original 24px-high logo had (11px down), so it grows right and down.
       .child(h_flex().flex_1().h_full().items_start().pt(LOGO_TOP).child(logo()))
