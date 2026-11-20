@@ -5,7 +5,7 @@
 // Opened from the tab bar's Steps button; see ./tp.js.
 import { div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { TpView, classify, steps, card, laneColor, dragPan, panelBox } from "./tp.js";
+import { TpView, steps, card, laneColor, dragPan, panelBox } from "./tp.js";
 
 const zoomBy = (view, k) => { view.zoom = Math.max(0.5, Math.min(1.6, (view.zoom ?? 1) * k)); };
 
@@ -18,7 +18,7 @@ export default class Steps extends TpView {
     if (k && k.data === this.data && k.z === z && k.width === width && k.t === t) return this.planned;
     // A pinch (or Cmd/Ctrl and the wheel) scales everything; more cards fit a row when smaller.
     const PAD = 12 * z, GAP = 10 * z, CARD_H = 76 * z, HEAD_H = 30 * z, STEP_GAP = 16 * z, MIN_W = 210 * z;
-    const rows = steps(classify(this.data));
+    const rows = steps(this.classified);
     // Lay the cards out ourselves: the lines need to know where each one is.
     const avail = Math.max(MIN_W, width - 2 * PAD);
     const cols = Math.max(1, Math.floor((avail + GAP) / (MIN_W + GAP)));

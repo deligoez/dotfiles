@@ -272,19 +272,28 @@ export class TpView extends View {
     });
   }
 
+  // The same export as last time keeps the same data object, so what is built
+  // from it (classify, a view's layout) stays cached; the render still runs, as
+  // durations ("running 12 min") age.
   reload(cx) {
-    const spec = this.spec;
-    if (!spec || this.loading) return;
-    this.loading = true;
-    cx.spawn(async (cx) => {
+    this.load ??= serial(async (cx) => {
+      const spec = this.spec;
+      if (!spec) return;
       try {
-        this.data = await tp(["export", "--file", spec], this.root);
+        const raw = await tpRaw(["export", "--file", spec], this.root);
+        if (raw !== this.raw || spec !== this.rawSpec || !this.data) { this.data = JSON.parse(raw); this.raw = raw; this.rawSpec = spec; }
         this.error = null;
       } catch (e) { this.error = String(e.message ?? e); }
-      this.loading = false;
       if (this.watching !== spec) this.watch(spec, cx);
       cx.notify();
     });
+    cx.spawn((cx) => this.load(cx));
+  }
+
+  // classify(this.data), once per data.
+  get classified() {
+    if (this.classifiedOf !== this.data) { this.classifiedOf = this.data; this.classifiedData = classify(this.data); }
+    return this.classifiedData;
   }
 
   // The spec's folder holds the task file (tp writes it atomically, so any change
@@ -362,7 +371,7 @@ export class TpView extends View {
 
   // The body, and beside or under it the selected task (a click on a card).
   withDetail(t, cx) {
-    const task = this.selected ? classify(this.data).find(x => x.id === this.selected) : null;
+    const task = this.selected ? this.classified.find(x => x.id === this.selected) : null;
     if (!task) return this.body(t, cx);
     const pane = { width: this.size.width, height: this.size.height - 34 };
     const box = panelBox(pane);

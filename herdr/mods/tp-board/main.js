@@ -3,13 +3,13 @@
 // bar's Board button; see ./tp.js.
 import { div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { TpView, classify, card, laneColor } from "./tp.js";
+import { TpView, card, laneColor } from "./tp.js";
 
 const LANES = [["ready", "Ready"], ["wip", "In progress"], ["waiting", "Waiting"], ["done", "Done"]];
 
 export default class Board extends TpView {
   body(t) {
-    const tasks = classify(this.data);
+    const tasks = this.classified;
     // Newest closed first; the others keep the file's order.
     const lane = (id) => {
       const list = tasks.filter(x => x.lane === id);
