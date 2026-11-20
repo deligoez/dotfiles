@@ -16,9 +16,10 @@ property glow : "/opt/homebrew/bin/glow"
 
 on open theFiles
 	set herdr to POSIX path of (path to home folder) & ".local/bin/herdr-app"
+	set glowStyle to my appearance()
 	repeat with f in theFiles
 		set p to POSIX path of f
-		set args to "{\"direction\":\"right\",\"argv\":[" & my jstr(glow) & ",\"-t\"," & my jstr(p) & "]}"
+		set args to "{\"direction\":\"right\",\"argv\":[" & my jstr(glow) & ",\"-s\"," & my jstr(glowStyle) & ",\"-t\"," & my jstr(p) & "]}"
 		try
 			do shell script "pgrep -xq Herdr && " & quoted form of herdr & " do pane.split " & quoted form of args
 			do shell script "open -a Herdr"
@@ -27,6 +28,17 @@ on open theFiles
 		end try
 	end repeat
 end open
+
+-- glow's style for the system's appearance at the moment the file opens:
+-- "dark" or "light". glow's own "auto" asks the terminal for its background,
+-- gets no answer in a Herdr pane and falls back to dark, which a light system
+-- can't read. An open pane keeps its style; reopen the file after a switch.
+on appearance()
+	try
+		if (do shell script "defaults read -g AppleInterfaceStyle") is "Dark" then return "dark"
+	end try
+	return "light"
+end appearance
 
 -- A JSON string literal: backslashes and double quotes escaped.
 on jstr(s)
