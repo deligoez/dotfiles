@@ -87,7 +87,7 @@ export function card(t, task, opts = {}) {
     .flex_none().min_w(0).rounded(7 * s)
     .border(on ? 2 : 1).border_color(on ? t.foreground : t.border).bg(t.raised).overflow_hidden()
     .when(Boolean(view), el => el.cursor_pointer().hover(st => st.bg(t.hover))
-      .on_click((_e, cx) => { view.selected = on ? null : task.id; cx.notify(); }))
+      .on_click((_e, cx) => { if (view.dragMoved) return; view.selected = on ? null : task.id; cx.notify(); }))
     .child(div().w(3 * s).flex_none().self_stretch().bg(color))
     .child(v_flex().flex_1().min_w(0).px(9 * s).py(7 * s).gap(3 * s)
       .child(h_flex().gap(6 * s).items_start()
@@ -95,6 +95,34 @@ export function card(t, task, opts = {}) {
         .when(task.lane === "done", el => el.child(div().flex_none().text_size(12 * s).text_color(t.done).child("✓"))))
       .child(div().text_size(10.5 * s).font_family(MONO).text_color(t.dim).truncate().child(task.id))
       .child(div().text_size(11 * s).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
+}
+
+// Press and drag to pan a view we scroll ourselves (gpui's scroll offset can't be
+// set from a script). apply(dx, dy) moves the content by the pointer's motion in
+// layout px; click(e, cx), if given, runs on a release that did not drag. A drag
+// ends on release or when the pointer leaves el. view.dragMoved stays true until
+// the next press, so a card's own click can tell it was a drag.
+export function dragPan(el, view, apply, click) {
+  const zoom = () => Number(settings()?.zoom) || 1;
+  return el.when(Boolean(view.drag?.moved), e => e.cursor_grabbing())
+    .on_mouse_down("left", (e) => { view.drag = { x: e.position.x, y: e.position.y, dx: 0, dy: 0, moved: false }; view.dragMoved = false; })
+    .on_mouse_move((e, cx) => {
+      const d = view.drag;
+      if (!d) return;
+      const dx = (e.position.x - d.x) / zoom(), dy = (e.position.y - d.y) / zoom();
+      if (!d.moved && Math.hypot(dx, dy) < 4) return;
+      d.moved = view.dragMoved = true;
+      apply(dx - d.dx, dy - d.dy);
+      d.dx = dx; d.dy = dy;
+      cx.notify();
+    })
+    .on_mouse_up("left", (e, cx) => {
+      const moved = view.drag?.moved;
+      view.drag = null;
+      if (!moved && click) click(e, cx);
+      cx.notify();
+    })
+    .on_hover((hovered, cx) => { if (!hovered && view.drag) { view.drag = null; cx.notify(); } });
 }
 
 // Markdown-ish text (tp's descriptions use headings, paragraphs and lists) as
