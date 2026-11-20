@@ -3,7 +3,7 @@
 // - the project is props().root, set by the tab bar's button when it opens the pane;
 // - the spec is picked in the header, remembered per project in shared "tp.spec";
 //   by default the most active one (wip tasks, then open tasks, then newest file);
-// - the data is `tp export --file <spec> --compact`, reloaded whenever the spec's
+// - the data is `tp export --file <spec>` (descriptions included), reloaded whenever the spec's
 //   folder or the project's .tp/ changes, and on a slow timer as a fallback.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
@@ -53,7 +53,7 @@ export function classify(data) {
     else if (lane === "ready") line = unblocks ? `unblocks ${unblocks}` : "ready";
     else if (t.state === "waits_on_epic") line = waits.length ? `epic waits on ${waits.join(", ")}` : "waits on its epic";
     else line = waits.length ? `after ${waits.join(", ")}` : "waiting";
-    return { ...t, lane, line, unblocks };
+    return { ...t, lane, line, unblocks, dependents: dependents.get(t.id) ?? [] };
   });
 }
 
@@ -80,13 +80,14 @@ export function steps(tasks) {
 export const laneColor = (t, lane) => ({ done: t.done, wip: t.working, ready: t.ansi2, waiting: t.dim })[lane] ?? t.dim;
 
 // One task as a card: a status stripe on the left, the title, the mono id and its status line.
-// opts.s scales it (a zoomed view).
+// opts.s scales it (a zoomed view); opts.view (a TpView) makes a click select it.
 export function card(t, task, opts = {}) {
-  const color = laneColor(t, task.lane), s = opts.s ?? 1;
-  const tip = [task.title, task.acceptance].filter(Boolean).join("\n\n");
+  const color = laneColor(t, task.lane), s = opts.s ?? 1, view = opts.view, on = view?.selected === task.id;
   return h_flex().id(`card-${task.id}`).when(opts.width != null, el => el.w(opts.width)).when(opts.height != null, el => el.h(opts.height))
     .flex_none().min_w(0).rounded(7 * s)
-    .border(1).border_color(t.border).bg(t.raised).overflow_hidden().tooltip(tip.slice(0, 600))
+    .border(on ? 2 : 1).border_color(on ? t.foreground : t.border).bg(t.raised).overflow_hidden()
+    .when(Boolean(view), el => el.cursor_pointer().hover(st => st.bg(t.hover))
+      .on_click((_e, cx) => { view.selected = on ? null : task.id; cx.notify(); }))
     .child(div().w(3 * s).flex_none().self_stretch().bg(color))
     .child(v_flex().flex_1().min_w(0).px(9 * s).py(7 * s).gap(3 * s)
       .child(h_flex().gap(6 * s).items_start()
@@ -94,6 +95,81 @@ export function card(t, task, opts = {}) {
         .when(task.lane === "done", el => el.child(div().flex_none().text_size(12 * s).text_color(t.done).child("✓"))))
       .child(div().text_size(10.5 * s).font_family(MONO).text_color(t.dim).truncate().child(task.id))
       .child(div().text_size(11 * s).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
+}
+
+// Markdown-ish text (tp's descriptions use headings, paragraphs and lists) as
+// blocks: a heading line stands apart, the rest keeps its lines.
+function prose(t, text, key) {
+  const blocks = String(text).replace(/\r/g, "").split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
+  return v_flex().gap(7).children(blocks.flatMap((b, i) => {
+    const m = /^#{1,6}\s+(.*)$/.exec(b.split("\n")[0]);
+    if (!m) return [div().id(`${key}-${i}`).text_size(12).text_color(t.foreground).child(b)];
+    const rest = b.split("\n").slice(1).join("\n").trim();
+    return [div().text_size(11.5).text_color(t.muted).pt(2).child(m[1]),
+      ...(rest ? [div().id(`${key}-${i}`).text_size(12).text_color(t.foreground).child(rest)] : [])];
+  }));
+}
+
+// Where the detail panel goes: beside the content in a wide pane, under it in a
+// narrow one. Sizes in layout px.
+export function panelBox(size) {
+  return size.width >= 700 ? { side: true, w: Math.min(440, Math.round(size.width * 0.4)) } : { side: false, h: Math.round(size.height * 0.45) };
+}
+
+// The selected epic or task, scrollable: d = { id, title, color, word, meta: [text],
+// links: [[label, [id]]], sections: [[label, text]] }. pick(id) selects a linked
+// one, close() clears the selection.
+// A long section shows its first CUT characters until "Show all": laying out
+// pages of text on every frame ran a big map's render out of time.
+const CUT = 1000;
+const opened = new Set();   // "<id>/<label>" of the sections shown whole
+
+export function detailPanel(t, size, d, pick, close) {
+  const box = panelBox(size);
+  const section = ([label, text], i) => {
+    const key = `${d.id}/${label}`, whole = opened.has(key) || text.length <= CUT;
+    const shown = whole ? text : `${text.slice(0, CUT).replace(/\s+\S*$/, "")} …`;
+    return v_flex().gap(4)
+      .child(div().text_size(11).text_color(t.dim).child(label))
+      .child(prose(t, shown, `sec-${i}`))
+      .when(text.length > CUT, el => el.child(div().id(`more-${i}`).text_size(11).text_color(t.accent).cursor_pointer()
+        .on_click((_e, cx) => { if (whole) opened.delete(key); else opened.add(key); cx.notify(); })
+        .child(whole ? "Show less" : `Show all (${Math.round(text.length / 100) / 10}k characters)`)));
+  };
+  const chip = (id) => div().id(`link-${id}`).px(6).py(1).rounded(4).bg(t.hover).font_family(MONO).text_size(10.5)
+    .text_color(t.foreground).cursor_pointer().hover(s => s.bg(t.selected)).on_click((_e, cx) => { cx.stop_propagation(); pick(id, cx); cx.notify(); }).child(id);
+  return v_flex().id("tp-detail").flex_none().bg(t.raised).border_color(t.border)
+    .when(box.side, el => el.w(box.w).h_full().border_l(1)).when(!box.side, el => el.h(box.h).w_full().border_t(1))
+    .child(h_flex().flex_none().px(12).pt(9).pb(6).gap(8).items_center()
+      .child(div().size(8).rounded(4).flex_none().bg(d.color))
+      .child(div().min_w(0).truncate().font_family(MONO).text_size(11.5).text_color(t.foreground).child(d.id))
+      .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.muted).child(d.word ?? ""))
+      .child(div().id("tp-detail-close").flex_none().px(6).rounded(4).text_size(13).text_color(t.muted).cursor_pointer()
+        .hover(s => s.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { close(cx); cx.notify(); }).child("×")))
+    .child(v_flex().id("tp-detail-body").flex_1().min_h(0).overflow_y_scroll().px(12).pb(14).gap(10)
+      .child(div().text_size(13.5).text_color(t.foreground).child(d.title ?? ""))
+      .when((d.meta ?? []).length > 0, el => el.child(v_flex().gap(2)
+        .children(d.meta.map(m => div().text_size(11).text_color(t.muted).child(m)))))
+      .children((d.links ?? []).filter(([, ids]) => ids.length).map(([label, ids]) => v_flex().gap(4)
+        .child(div().text_size(11).text_color(t.dim).child(label))
+        .child(h_flex().flex_wrap().gap(4).children(ids.map(chip)))))
+      .children((d.sections ?? []).filter(([, text]) => text).map(section)));
+}
+
+// A task as the detail panel shows it.
+export function taskDetail(t, task) {
+  const when = (label, iso) => iso ? `${label} ${new Date(iso).toLocaleString()}` : null;
+  return {
+    id: task.id, title: task.title, color: laneColor(t, task.lane), word: task.line,
+    meta: [
+      [task.status, task.estimate_minutes ? `estimate ${task.estimate_minutes} min` : null, (task.tags ?? []).length ? task.tags.join(", ") : null].filter(Boolean).join(" · "),
+      when("started", task.started_at), when("closed", task.closed_at),
+      task.commit_sha ? `commit ${task.commit_sha}` : null,
+      (task.source_sections ?? []).length ? `spec: ${task.source_sections.join(", ")}${task.source_lines ? ` (lines ${task.source_lines})` : ""}` : null,
+    ].filter(Boolean),
+    links: [["Depends on", task.depends_on ?? []], ["Waits on", (task.waits_on ?? []).filter(w => !(task.depends_on ?? []).includes(w))], ["Unblocks", task.dependents ?? []]],
+    sections: [["Description", task.description], ["Acceptance", task.acceptance], ["Closed with", task.closed_reason]],
+  };
 }
 
 // A spec with wip tasks first, then the one that moved last.
@@ -108,6 +184,7 @@ export class TpView extends View {
     this.data = null;
     this.error = null;
     this.picking = false;
+    this.selected = null;   // the task in the detail panel
     this.size = { width: 800, height: 600 };
     this.watches = [];
     if (checking()) return;
@@ -126,6 +203,7 @@ export class TpView extends View {
     setShared("tp.spec", { ...(shared("tp.spec") ?? {}), [this.root]: path });
     this.picking = false;
     this.data = null;
+    this.selected = null;
     this.reload(cx);
   }
 
@@ -157,7 +235,7 @@ export class TpView extends View {
     this.loading = true;
     cx.spawn(async (cx) => {
       try {
-        this.data = await tp(["export", "--file", spec, "--compact"], this.root);
+        this.data = await tp(["export", "--file", spec], this.root);
         this.error = null;
       } catch (e) { this.error = String(e.message ?? e); }
       this.loading = false;
@@ -236,7 +314,26 @@ export class TpView extends View {
       .child(this.header(t))
       .child(this.error && !this.data ? this.message(t, this.error)
         : !this.data ? this.message(t, this.files ? "Loading…" : "Looking for tp specs…")
-        : this.body(t, cx));
+        : this.withDetail(t, cx));
+  }
+
+  // The body, and beside or under it the selected task (a click on a card).
+  withDetail(t, cx) {
+    const task = this.selected ? classify(this.data).find(x => x.id === this.selected) : null;
+    if (!task) return this.body(t, cx);
+    const pane = { width: this.size.width, height: this.size.height - 34 };
+    const box = panelBox(pane);
+    const pick = (id) => { if (this.data.tasks?.some(x => x.id === id)) this.selected = id; };
+    // h_flex centres its children: stretch them, or the body gets no height.
+    return (box.side ? h_flex().items_stretch() : v_flex()).flex_1().min_h(0).min_w(0)
+      .child(v_flex().flex_1().min_h(0).min_w(0).child(this.body(t, cx)))
+      .child(detailPanel(t, pane, taskDetail(t, task), pick, () => { this.selected = null; }));
+  }
+
+  // The width the body gets: the pane's, less a detail panel beside it.
+  bodyWidth() {
+    const box = this.selected ? panelBox({ width: this.size.width, height: this.size.height - 34 }) : null;
+    return box?.side ? this.size.width - box.w : this.size.width;
   }
 
   body() { return div(); }
