@@ -30,11 +30,20 @@ else
             set script (string match -v '*only a resume from the Revive dialog*' -- (string split \n -- $script) | string join \n | string collect)
         end
         set -g __revive_script $script
-        # Start the agent at the first prompt, once config files are done.
-        function __revive_run --on-event fish_prompt
-            functions -e __revive_run
+        function __revive_resume
+            functions -e __revive_resume
             zsh -c $__revive_script
             set -e __revive_script
+        end
+        # Start the agent at the first prompt, once config files are done, as a
+        # command run from the prompt (the leading space keeps it out of history).
+        # Run straight from the event handler, it stayed in fish's process group:
+        # fish kept the terminal's foreground, so herdr-core saw the shell, not
+        # the agent, cleared its status and no agent showed in Herdr.
+        function __revive_run --on-event fish_prompt
+            functions -e __revive_run
+            commandline -r ' __revive_resume'
+            commandline -f execute
         end
     end
 end
