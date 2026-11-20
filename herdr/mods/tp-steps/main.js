@@ -1,6 +1,7 @@
 // tp task steps: one spec's tasks in dependency order, read-only and live.
 // Step N holds the tasks whose latest dependency is in step N-1; lines join
-// each task to the ones it waits on. A pinch (or Cmd/Ctrl and the wheel) zooms.
+// each task to the ones it waits on. A pinch (or Cmd/Ctrl and the wheel) zooms;
+// click a card for the task's details.
 // Opened from the tab bar's Steps button; see ./tp.js.
 import { div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
@@ -15,7 +16,7 @@ export default class Steps extends TpView {
     const z = this.zoom ?? 1;
     const PAD = 12 * z, GAP = 10 * z, CARD_H = 76 * z, HEAD_H = 30 * z, STEP_GAP = 16 * z, MIN_W = 210 * z;
     // Lay the cards out ourselves: the lines need to know where each one is.
-    const avail = Math.max(MIN_W, this.size.width - 2 * PAD);
+    const avail = Math.max(MIN_W, this.bodyWidth() - 2 * PAD);
     const cols = Math.max(1, Math.floor((avail + GAP) / (MIN_W + GAP)));
     const w = Math.floor((avail - (cols - 1) * GAP) / cols);
     const at = new Map(), heads = [];
@@ -56,6 +57,6 @@ export default class Steps extends TpView {
           .child(div().text_size(12 * z).text_color(t.foreground).child(`Step ${h.step}`))
           .child(div().text_size(11 * z).text_color(t.dim).child(h.step === 1 ? "needs no other task" : `after step ${h.step - 1}`))))
         .children([...at.values()].map(({ task, x, y }) =>
-          div().absolute().left(x).top(y).child(card(t, task, { width: w, height: CARD_H, s: z })))));
+          div().absolute().left(x).top(y).child(card(t, task, { width: w, height: CARD_H, s: z, view: this })))));
   }
 }
