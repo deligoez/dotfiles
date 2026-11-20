@@ -2,7 +2,8 @@
 // right under each space, so one list replaces the separate spaces and agents
 // blocks. Stable colored avatars, worktrees under their checkout, grouped by
 // machine when more than one is known. After a space's name, the repo its first
-// terminal is in now, only where unusual: branch, ahead/behind. Click a space to
+// terminal is in now, only where unusual, and ahead/behind; no branch (Claude Code's
+// status line shows it). Click a space to
 // switch, an agent to focus its pane; right-click a space for its menu, drag to reorder.
 
 import { View, div, svg, image } from "gpui-kit";
@@ -478,16 +479,13 @@ export default class Spaces extends View {
     });
   }
 
-  // Only what's unusual, after the name: "herdr \u00b7 spike \u21912 \u21931". The repo or
-  // branch goes when the name already says it (a worktree is named after its branch),
-  // and master/main go: nearly every space is on one. When the row is full, it
-  // and the name both start from their text's width and give way in proportion.
+  // Only what's unusual, after the name: the repo, then ahead/behind ("herdr ↑2 ↓1").
+  // The repo goes when the name already says it, and in a worktree row. No branch:
+  // Claude Code's status line shows it, and a long one crowded the name. When the
+  // row is full, it and the name both start from their text's width and give way
+  // in proportion.
   gitTail(g, tree, name, t) {
-    const raw = g.branch ?? "detached";
-    const same = (a) => a.toLowerCase() === name.toLowerCase();
-    const branch = same(raw) || raw === "master" || raw === "main" ? "" : raw;
-    const repo = tree || same(g.name) ? "" : g.name;
-    const where = [repo, branch].filter(Boolean).join(" \u00b7 ");
+    const where = tree || g.name.toLowerCase() === name.toLowerCase() ? "" : g.name;
     return h_flex()
       .flex_auto()
       .min_w(where ? SIDE_MIN : 0)
