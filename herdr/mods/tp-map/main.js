@@ -11,6 +11,19 @@ import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
+// Paths are drawn in percent of the canvas they fill, so a zoom (which only
+// resizes the canvas) needs no new paths.
+const pctX = (g) => (x) => `${(x / g.width) * 100}%`;
+const pctY = (g) => (y) => `${(y / g.height) * 100}%`;
+
+// One dependency curve, from the bottom middle of epic a to the top middle of b.
+function curve(p, g, a, b) {
+  const X = pctX(g), Y = pctY(g);
+  const x0 = a.x + NW / 2, y0 = a.y + NH, x1 = b.x + NW / 2, y1 = b.y;
+  const bend = Math.max(10, Math.abs(y1 - y0) / 2);
+  return p.move_to(X(x0), Y(y0)).cubic_bezier_to(X(x1), Y(y1), X(x0), Y(y0 + bend), X(x1), Y(y1 - bend));
+}
+
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
 // all done counts as ready.
@@ -151,23 +164,50 @@ export default class Map extends View {
     this.refresh();
   }
 
+  // The scale the layout is made at. From 15/26 up the layout is the same at any
+  // zoom (band heads and hold marks have their full size); below, it goes in
+  // steps, never above the zoom, so a pinch rebuilds only when it crosses one.
+  gscale(s) {
+    if (s >= 0.58) return 1;
+    return 0.58 * Math.pow(0.87, Math.ceil(Math.log(s / 0.58) / Math.log(0.87)));
+  }
+
   // After the data, the scale or the selection change (from an event or a task, never
   // from render): fit the first time the size is known, then lay the map out and
-  // build its paths. A render (one per pointer move while panning) only places them.
+  // build its paths. The paths are in percent of the canvas, so a zoom only
+  // resizes the canvas; a selection builds only its own few curves. A render (one
+  // per pointer move while panning) only places them.
   refresh() {
     if (!this.data) return;
     if (this.scale == null) { if (!this.sized) return; this.scale = this.fit(this.geometry()); }
-    const s = this.scale, g = this.geometry(s), edges = this.data.edges ?? [];
-    this.geo = g; this.geoScale = s;
-    this.paths = this.buildStrokes(g, edges, s, this.selected);
-    this.boxes = this.buildBoxes(g, edges, s);
+    const qs = this.gscale(this.scale), b = this.built;
+    if (!b || b.data !== this.data || b.qs !== qs) this.built = this.build(qs);
+    const sel = this.selected;
+    if (this.chosenFor !== sel || this.chosenOf !== this.built) {
+      this.chosenFor = sel; this.chosenOf = this.built;
+      this.chosen = sel ? this.buildChosen(this.built, sel) : null;
+    }
   }
 
   // The layout at the current scale: the one refresh() made, unless that is stale.
   layout() {
     if (!this.data) return null;
-    const s = this.scale ?? 1;
-    return this.geo && this.geoScale === s ? this.geo : this.geometry(s);
+    const qs = this.gscale(this.scale ?? 1), b = this.built;
+    return b && b.data === this.data && b.qs === qs ? b.g : this.geometry(qs);
+  }
+
+  // Everything that depends on the data and the layout's scale alone.
+  build(qs) {
+    const d = this.data, g = this.geometry(qs), edges = d.edges ?? [], nodes = d.nodes ?? [];
+    const ins = new globalThis.Map(), outs = new globalThis.Map();
+    const push = (m, k, v) => { const l = m.get(k); if (l) l.push(v); else m.set(k, [v]); };
+    for (const e of edges) { push(ins, e.to, e.from); push(outs, e.from, e.to); }
+    const doneIds = new Set(nodes.filter(n => n.state === "done").map(n => n.id));
+    const claimed = nodes.filter(n => ["claimed", "specced", "in_progress"].includes(n.state)).length;
+    return {
+      data: d, qs, g, ins, outs, doneIds, counts: { done: doneIds.size, claimed },
+      strokes: this.buildStrokes(g, edges), boxes: this.buildBoxes(g, ins, doneIds, qs),
+    };
   }
 
   // The scale that fits the map's width (whole: its height too) in the pane.
@@ -179,8 +219,7 @@ export default class Map extends View {
 
   header(t, g) {
     const nodes = this.data?.nodes ?? [];
-    const done = nodes.filter(n => n.state === "done").length;
-    const claimed = nodes.filter(n => ["claimed", "specced", "in_progress"].includes(n.state)).length;
+    const { done, claimed } = this.built?.counts ?? { done: 0, claimed: 0 };
     const btn = (id, label, fn) => div().id(id).px(7).h(22).flex().items_center().rounded(5).text_size(12).text_color(t.muted)
       .cursor_pointer().hover(s => s.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { fn(); cx.notify(); }).child(label);
     const s = this.scale ?? 1;
@@ -205,7 +244,7 @@ export default class Map extends View {
     // most CHUNK curves: a single path with thousands of them doesn't draw.
     // They are built in refresh(), outside render: a render that built them beside
     // another busy pane ran out of time ("interrupted").
-    const strokes = this.paths ?? [];
+    const strokes = [...(this.built?.strokes ?? []), ...(this.chosen ? [["chosen", this.chosen]] : [])];
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
     const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
     // Labels only from 45% up, and only for the epics in view (and a margin).
@@ -213,7 +252,7 @@ export default class Map extends View {
     const labels = s < 0.45 ? [] : [...g.at.values()].filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
       && (y + NH) * s >= this.oy - m && y * s <= this.oy + v.height + m);
     const at = sel ? g.at.get(sel) : null;
-    const boxes = this.boxes ?? { fills: [], borders: [], holds: [] };
+    const boxes = this.built?.boxes ?? { fills: [], borders: [], holds: [] };
     const paint = (path, bg) => window.paint_path(path, bg).absolute().top(0).left(0).size_full();
 
     // The epics are a few prebuilt paths (fill, border and hold mark, one per
@@ -238,11 +277,9 @@ export default class Map extends View {
 
   // The epic boxes as built paths, grouped by colour: fills [status, done, path],
   // borders [status, path], hold marks [hold, path]. At most CHUNK boxes a path.
-  buildBoxes(g, edges, s) {
+  // In percent of the canvas, like the curves.
+  buildBoxes(g, incoming, doneIds, s) {
     const CHUNK = 200, nodes = [...g.at.values()];
-    const doneIds = new Set(nodes.filter(a => a.n.state === "done").map(a => a.n.id));
-    const incoming = new globalThis.Map();
-    for (const e of edges) { if (!incoming.has(e.to)) incoming.set(e.to, []); incoming.get(e.to).push(e.from); }
     const groups = new globalThis.Map(), built = [];
     const add = (key, make, rect) => {
       let o = groups.get(key);
@@ -250,7 +287,8 @@ export default class Map extends View {
       o.p = o.p.add_polygon(rect, true);
       o.n++;
     };
-    const rect = (x0, y0, x1, y1) => [[x0 * s, y0 * s], [x1 * s, y0 * s], [x1 * s, y1 * s], [x0 * s, y1 * s]];
+    const X = pctX(g), Y = pctY(g);
+    const rect = (x0, y0, x1, y1) => [[X(x0), Y(y0)], [X(x1), Y(y0)], [X(x1), Y(y1)], [X(x0), Y(y1)]];
     for (const { n, x, y } of nodes) {
       const st = statusOf(n, (incoming.get(n.id) ?? []).every(f => doneIds.has(f)));
       const done = n.state === "done";
@@ -277,33 +315,40 @@ export default class Map extends View {
     return null;
   }
 
-  // The edge curves as built paths, [kind, path], plain first so the rest draw on top.
-  buildStrokes(g, edges, s, sel) {
-    const CHUNK = 200, width = { plain: 1, critical: 1.6, chosen: 2 };
+  // The edge curves as built paths, [kind, path], plain first so the critical
+  // ones draw on top. One path holds at most CHUNK curves.
+  buildStrokes(g, edges) {
+    const CHUNK = 200, width = { plain: 1, critical: 1.6 };
     const strokes = [];
     const open = {};
     for (const e of edges) {
       const a = g.at.get(e.from), b = g.at.get(e.to);
       if (!a || !b) continue;
-      const kind = sel && (e.from === sel || e.to === sel) ? "chosen" : e.critical ? "critical" : "plain";
+      const kind = e.critical ? "critical" : "plain";
       if (!open[kind] || open[kind].n >= CHUNK) { open[kind] = { p: PathBuilder.stroke(width[kind]), n: 0 }; strokes.push([kind, open[kind]]); }
-      const x0 = (a.x + NW / 2) * s, y0 = (a.y + NH) * s, x1 = (b.x + NW / 2) * s, y1 = b.y * s;
-      const bend = Math.max(10 * s, Math.abs(y1 - y0) / 2);
-      open[kind].p = open[kind].p.move_to(x0, y0).cubic_bezier_to(x1, y1, x0, y0 + bend, x1, y1 - bend);
+      open[kind].p = curve(open[kind].p, g, a, b);
       open[kind].n++;
     }
-    const order = { plain: 0, critical: 1, chosen: 2 };
-    strokes.sort((x, y) => order[x[0]] - order[y[0]]);
+    strokes.sort((x, y) => (x[0] === "critical") - (y[0] === "critical"));
     return strokes.map(([k, o]) => [k, o.p.build()]);
+  }
+
+  // The selected epic's curves, in and out: one small path drawn over the rest.
+  buildChosen(b, sel) {
+    const at = b.g.at, me = at.get(sel);
+    if (!me) return null;
+    let p = PathBuilder.stroke(2), n = 0;
+    for (const id of b.ins.get(sel) ?? []) { const a = at.get(id); if (a) { p = curve(p, b.g, a, me); n++; } }
+    for (const id of b.outs.get(sel) ?? []) { const c = at.get(id); if (c) { p = curve(p, b.g, me, c); n++; } }
+    return n ? p.build() : null;
   }
 
   // The selected epic: what it is, why it waits on what, and what it frees.
   detail(t, g) {
     const a = g.at.get(this.selected);
     if (!a) return null;
-    const n = a.n, edges = this.data.edges ?? [], e = this.epics?.get(n.id) ?? {};
-    const ins = edges.filter(x => x.to === n.id).map(x => x.from), outs = edges.filter(x => x.from === n.id).map(x => x.to);
-    const doneIds = new Set((this.data.nodes ?? []).filter(x => x.state === "done").map(x => x.id));
+    const n = a.n, e = this.epics?.get(n.id) ?? {}, b = this.built;
+    const ins = b?.ins.get(n.id) ?? [], outs = b?.outs.get(n.id) ?? [], doneIds = b?.doneIds ?? new Set();
     const [color, word] = look(t, statusOf(n, ins.every(f => doneIds.has(f))));
     const whys = (e.depends_on ?? []).filter(d => d.why).map(d => `${d.id}: ${d.why}`).join("\n\n");
     const d = {
