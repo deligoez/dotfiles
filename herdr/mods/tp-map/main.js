@@ -7,7 +7,7 @@
 import { View, div, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { theme, settings, props, watchFolder, checking, exec } from "herdr";
-import { tp, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
+import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
@@ -64,31 +64,37 @@ export default class Map extends View {
 
   async close() { for (const w of this.watches) w.cancel(); }
 
+  // One load at a time (a burst of watch events is one more load). The same
+  // layout as last time changes nothing: no parse, no new paths.
   reload(cx) {
-    if (this.loading) return;
-    this.loading = true;
-    cx.spawn(async (cx) => {
+    this.load ??= serial(async (cx) => {
       try {
-        this.data = await tp(["epic", "layout", "--json"], this.root);
-        this.epics = new globalThis.Map();   // the graph file may have changed
-        if (this.selected) this.fetchEpic(this.selected, cx);
-        this.refresh();
+        const raw = await tpRaw(["epic", "layout", "--json"], this.root);
         this.error = null;
+        if (raw === this.raw) return;
+        this.data = JSON.parse(raw);
+        this.raw = raw;
+        // The graph file may have changed: refetch the open epic's text, showing
+        // the old one until the new one is in.
+        const old = this.epics, sel = this.selected;
+        this.epics = new globalThis.Map();
+        if (sel && old?.has(sel)) this.epics.set(sel, old.get(sel));
+        if (sel) this.fetchEpic(sel, cx, true);
+        this.refresh();
       } catch (e) {
         const m = String(e.message ?? e);
         this.error = /unknown command|layout/.test(m) && !this.data ? `This tp has no \`tp epic layout\` yet: ${m}` : m;
-      }
-      this.loading = false;
-      cx.notify();
+      } finally { cx.notify(); }
     });
+    cx.spawn((cx) => this.load(cx));
   }
 
   // The layout carries no text: the selected epic's description, acceptance and
   // the why of each dependency come from the graph file, one epic at a time
   // through jq. A big project's file is megabytes: parsing it here held up the
   // views' renders ("interrupted").
-  fetchEpic(id, cx) {
-    if (this.epics?.has(id)) return;
+  fetchEpic(id, cx, again) {
+    if (!again && this.epics?.has(id)) return;
     const args = ["-c", "--arg", "id", id, ".epics[] | select(.id == $id) | {description, acceptance, tags, condition, depends_on}", `${this.root}/.tp/epics.json`];
     cx.spawn(async (cx) => {
       let r;
