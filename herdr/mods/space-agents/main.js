@@ -107,6 +107,8 @@ function agentTitle(tab, l) {
 
 // Foreground programs that mean the agent has gone and its shell is back.
 const SHELLS = new Set(["fish", "zsh", "bash", "sh", "dash", "ksh", "tcsh", "csh", "nu", "pwsh", "login"]);
+// Commands that start an agent, and the app each one reports as.
+const AGENT_COMMANDS = { claude: "claude-code", codex: "codex", pi: "pi", omp: "omp", opencode: "opencode", gemini: "gemini" };
 
 function programIcon(p, size, color) {
   if (!p?.icon) return null;
@@ -169,30 +171,34 @@ export default class Spaces extends View {
     cx.timer.every(15000, cx => this.refreshMachines(cx));
     // Refresh only when the refs could have changed (see `due`).
     cx.timer.every(250, (cx) => this.checkNew(cx));
-    this.silent = new Set(); // terminals running an agent that doesn't report a status
+    this.silent = new Map(); // terminal -> app, for agents that don't report a status
     cx.timer.every(5000, (cx) => this.checkSilent(cx));
   }
 
   // Claude Code asks the terminal at start whether it may report a status (OSC 7501
   // ; ?) and waits 2 s; with no answer in time (a busy machine) it never reports,
-  // and the agent is missing from agents(). Such a pane keeps the `app` of an
-  // earlier report but has no status, as does one whose agent has exited, so the
-  // terminal's foreground program tells them apart: anything but a shell is the agent.
+  // and the agent is missing from agents(). Such a pane may still carry the `app`
+  // of an earlier report, or nothing at all (a restarted agent: Claude Code then
+  // shows its version as the process name), so the terminal's foreground decides:
+  // a known agent command, or anything but a shell in a pane that had an agent.
   async checkSilent(cx) {
     if (this.silentBusy) return;
-    const candidates = panes().filter((p) => p.terminal && !p.terminal.includes("/") && p.app && !p.status);
+    const candidates = panes().filter((p) => p.terminal && !p.terminal.includes("/") && !p.status);
     if (!candidates.length && !this.silent.size) return;
     this.silentBusy = true;
     try {
-      const found = new Set();
+      const found = new Map();
       await Promise.all(candidates.map(async (p) => {
         try {
           const r = await hc(["get", p.terminal, "--json"]);
-          const name = r.code === 0 ? JSON.parse(r.stdout).foreground?.name : null;
-          if (name && !SHELLS.has(name.replace(/^-/, ""))) found.add(p.terminal);
+          if (r.code !== 0) return;
+          const fg = JSON.parse(r.stdout).foreground ?? {};
+          const name = (fg.name ?? "").replace(/^-/, "");
+          const app = AGENT_COMMANDS[base(fg.argv?.[0] ?? "")] ?? (p.app && name && !SHELLS.has(name) ? p.app : null);
+          if (app) found.set(p.terminal, app);
         } catch {}
       }));
-      const changed = found.size !== this.silent.size || [...found].some((t) => !this.silent.has(t));
+      const changed = found.size !== this.silent.size || [...found].some(([t, app]) => this.silent.get(t) !== app);
       this.silent = found;
       if (changed) cx.notify();
     } finally { this.silentBusy = false; }
@@ -596,7 +602,11 @@ export default class Spaces extends View {
       const listed = new Set(list.map((a) => a.pane));
       for (const p of all) {
         if (!this.silent.has(p.terminal) || p.status || listed.has(p.pane)) continue;
-        list.push({ address: p.terminal, pane: p.pane, space: spaceOf.get(p.tab), tab: p.tab, status: null, app: p.app, program: p.program, title: p.title, focused: p.focused });
+        // A pane that lost its agent's report also lost its program: borrow it (the icon)
+        // from another pane running the same app.
+        const app = this.silent.get(p.terminal);
+        const program = p.program?.icon ? p.program : all.find((q) => q.app === app && q.program?.icon)?.program ?? p.program;
+        list.push({ address: p.terminal, pane: p.pane, space: spaceOf.get(p.tab), tab: p.tab, status: null, app, program, title: p.title, focused: p.focused });
       }
     }
     const perTab = new Map();
