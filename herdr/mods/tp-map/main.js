@@ -46,6 +46,8 @@ const lodOf = (s) => LODS.find(r => r >= s) ?? 2;
 // cells in view. A frame's cost grows with the straight pieces it paints, and
 // 3671 curves drawn whole held a big map at about 28 fps while panning.
 const CELL = 800;
+// The most curve pieces one frame paints at full detail; past it, the coarse level.
+const MAX_PIECES = 15000;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
@@ -81,6 +83,7 @@ export default class Map extends View {
     if (!this.root) { this.error = "No project: open this view from the tab bar."; return; }
     this.reload(cx);
     cx.timer.every(30000, (cx) => this.reload(cx));
+    cx.timer.every(16, (cx) => this.pump(cx));
     // .tp/ holds the epic graph; the task files feed each epic's lifecycle.
     for (const folder of [`${this.root}/.tp`, `${this.root}/spec`]) {
       const loop = { stopped: false, handle: null };
@@ -223,10 +226,9 @@ export default class Map extends View {
     if (this.scale == null) { if (!this.sized) return; this.scale = this.fit(this.geometry()); }
     const qs = this.gscale(this.scale), b = this.built;
     if (!b || b.data !== this.data || b.qs !== qs) this.built = this.build(qs);
-    const lod = lodOf(this.scale), lods = this.built.lods;
-    // A level not built yet waits for the map to stop: a pinch draws coarse.
-    if (!lods.has(lod) && !this.moving) lods.set(lod, this.buildStrokes(this.built.g, this.data.edges ?? [], lod));
-    if (!lods.has("fast")) lods.set("fast", this.buildStrokes(this.built.g, this.data.edges ?? [], 0, 3));
+    // The edges are built a slice at a time by pump(): the coarse level first, so
+    // the map soon has its curves, then the zoom's level once the map stops moving.
+    this.want = ["fast", ...(this.moving ? [] : [lodOf(this.scale)])];
     const sel = this.selected;
     if (this.chosenFor !== sel || this.chosenOf !== this.built) {
       this.chosenFor = sel; this.chosenOf = this.built;
@@ -293,12 +295,14 @@ export default class Map extends View {
     const v = this.view(), m = 200;
     const vx0 = this.ox / s, vy0 = this.oy / s, vx1 = (this.ox + v.width) / s, vy1 = (this.oy + v.height) / s;
     const lods = this.built?.lods;
-    const cells = (this.moving && lods?.get("fast")) || lods?.get(lodOf(s)) || lods?.get("fast") || [];
+    const inView = (cs) => (cs ?? []).filter((c) => !(c.x1 < vx0 || c.x0 > vx1 || c.y1 < vy0 || c.y0 > vy1));
+    const fast = inView(lods?.get("fast"));
+    let cells = this.moving ? fast : inView(lods?.get(lodOf(s)));
+    // A wide view of a big map holds too many pieces at full detail for one frame
+    // (siyakat's whole map on a 3440 px screen: "interrupted"): it stays coarse.
+    if (!cells.length || cells.reduce((n, c) => n + c.n, 0) > MAX_PIECES) cells = fast;
     const plain = [], critical = [];
-    for (const c of cells) {
-      if (c.x1 < vx0 || c.x0 > vx1 || c.y1 < vy0 || c.y0 > vy1) continue;
-      for (const kp of c.paths) (kp[0] === "critical" ? critical : plain).push(kp);
-    }
+    for (const c of cells) for (const kp of c.paths) (kp[0] === "critical" ? critical : plain).push(kp);
     const strokes = [...plain, ...critical, ...(this.chosen ? [["chosen", this.chosen]] : [])];
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
     const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
@@ -369,25 +373,51 @@ export default class Map extends View {
     return null;
   }
 
+  // Builds the edge levels refresh() asked for, a few ms each tick: built in one
+  // go, a big project's levels (3678 curves, tens of thousands of pieces) ran a
+  // callback past its time and the view stopped as "interrupted". A level drawn
+  // before it is done would miss curves, so the canvas uses only finished ones.
+  pump(cx) {
+    const b = this.built;
+    if (!b) return;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 8) {
+      if (this.job?.b !== b) {
+        const k = (this.want ?? []).find((k) => !b.lods.has(k));
+        if (k == null) { this.job = null; return; }
+        this.job = { b, k, lod: k === "fast" ? 0 : k, pieces: k === "fast" ? 3 : null, i: 0, cells: new globalThis.Map() };
+      }
+      if (!this.strokeStep(this.job, t0)) return;
+      b.lods.set(this.job.k, this.strokeCells(this.job));
+      this.job = null;
+      cx.notify();
+    }
+  }
+
   // The edges at one level of detail, cut into cells: each curve becomes about
   // one straight piece per 40 screen px (at the level's scale), and each piece
   // goes to the cell its middle is in. A cell keeps the box its pieces cover,
   // for the view test, and its paths as [kind, path]; at most CHUNK pieces a path.
   // `pieces`, when given, is the count for every curve (the in-motion level).
-  buildStrokes(g, edges, lod, pieces) {
+  // Goes on from edge `job.i` until 8 ms after t0; true once every edge is in.
+  strokeStep(job, t0) {
     const CHUNK = 1500, width = { plain: 1, critical: 1.6 };
-    const X = pctX(g), Y = pctY(g), cells = new globalThis.Map();
-    for (const e of edges) {
+    const g = job.b.g, edges = job.b.data.edges ?? [], lod = job.lod, cells = job.cells;
+    const X = pctX(g), Y = pctY(g);
+    for (; job.i < edges.length; job.i++) {
+      if (job.i % 64 === 0 && Date.now() - t0 >= 8) return false;
+      const e = edges[job.i];
       const a = g.at.get(e.from), b = g.at.get(e.to);
       if (!a || !b) continue;
       const kind = e.critical ? "critical" : "plain";
       const len = Math.hypot(b.x - a.x, b.y - a.y - NH) * lod;
-      const pts = polyline(a, b, pieces ?? Math.max(2, Math.min(24, Math.ceil(len / 40))));
+      const pts = polyline(a, b, job.pieces ?? Math.max(2, Math.min(24, Math.ceil(len / 40))));
       for (let i = 1; i < pts.length; i++) {
         const [px, py] = pts[i - 1], [qx, qy] = pts[i];
         const key = `${Math.floor((px + qx) / 2 / CELL)},${Math.floor((py + qy) / 2 / CELL)}`;
         let c = cells.get(key);
-        if (!c) cells.set(key, c = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, open: {}, done: [] });
+        if (!c) cells.set(key, c = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, n: 0, open: {}, done: [] });
+        c.n++;
         c.x0 = Math.min(c.x0, px, qx); c.x1 = Math.max(c.x1, px, qx);
         c.y0 = Math.min(c.y0, py, qy); c.y1 = Math.max(c.y1, py, qy);
         let o = c.open[kind];
@@ -399,7 +429,11 @@ export default class Map extends View {
         o.n++;
       }
     }
-    return [...cells.values()].map(c => ({ x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1, paths: c.done.map(([k, o]) => [k, o.p.build()]) }));
+    return true;
+  }
+
+  strokeCells(job) {
+    return [...job.cells.values()].map(c => ({ x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1, n: c.n, paths: c.done.map(([k, o]) => [k, o.p.build()]) }));
   }
 
   // The selected epic's curves, in and out: one small path drawn over the rest.
