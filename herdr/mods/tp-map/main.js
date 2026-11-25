@@ -10,7 +10,24 @@ import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, settings, props, watchFolder, checking, exec } from "herdr";
 import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan, reloadKey, reloadedNote } from "./tp.js";
 
-const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
+// A box holds an epic's id on two lines (a third of siyakat's ids pass the 17
+// characters one line holds; the longest is 37).
+const PAD = 16, NW = 118, NH = 32, GX = 12, ROW = 52, BAND_HEAD = 26;
+// An id cut into lines of at most `per` characters, at spaces (a hyphen keeps
+// its suffix: "Yöntemi-I", not "Yöntemi-" and "I"); the last line ends in …
+// when the id doesn't fit in `lines` (7 of siyakat's 710).
+function wrapId(id, per = 17, lines = 2) {
+  const words = String(id).split(/(?<=\s)/), out = [""];
+  for (const w of words) {
+    if ((out[out.length - 1] + w).trimEnd().length <= per) out[out.length - 1] += w;
+    else if (w.length > per) { let rest = w; while (rest.length) { if (out[out.length - 1].length >= per) out.push(""); const room = per - out[out.length - 1].length; out[out.length - 1] += rest.slice(0, room); rest = rest.slice(room); } }
+    else out.push(w);
+  }
+  const kept = out.map(l => l.trim()).filter(Boolean);
+  if (kept.length <= lines) return kept;
+  const last = kept.slice(lines - 1).join(" ");
+  return [...kept.slice(0, lines - 1), last.slice(0, per - 1) + "…"];
+}
 
 // Paths are drawn in percent of the canvas they fill, so a zoom (which only
 // resizes the canvas) needs no new paths.
@@ -608,7 +625,8 @@ export default class Map extends View {
       .when(Boolean(at), el => el.child(div().absolute().left(at.x * s - 1).top(at.y * s - 1).w(NW * s + 2).h(NH * s + 2)
         .rounded(3).border(2).border_color(t.foreground)))
       .children(labels.map(({ n, x, y }) => div().absolute().left(x * s + 5 * s).top(y * s).w((NW - 10) * s).h(NH * s)
-        .flex().items_center().truncate().font_family(MONO).text_size(10.5 * s).text_color(t.foreground).child(n.id)));
+        .flex().flex_col().justify_center().font_family(MONO).text_size(10.5 * s).line_height(13 * s).text_color(t.foreground)
+        .children(wrapId(n.id).map(line => div().whitespace_nowrap().overflow_hidden().child(line)))));
   }
 
   // The epic boxes as built paths, grouped by colour: fills [status, done, path],
