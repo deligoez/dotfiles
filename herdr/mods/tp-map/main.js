@@ -154,13 +154,19 @@ export default class Map extends View {
 
   // Where everything goes at scale 1: rows by layer, a header above each milestone band.
   // A band's header keeps at least 15 screen px for its name, whatever the zoom.
+  // tp packs a band's columns toward where its edges lead, which can leave a
+  // small band alone at the far edge (the first milestone's few roots, far right
+  // over the rest). A band narrower than half the map moves to its middle.
   geometry(s = 1) {
     const d = this.data, bands = d.bands ?? [], head = Math.max(BAND_HEAD, 15 / s);
     const bandOf = (layer) => Math.max(0, bands.findIndex(b => layer >= b.from_layer && layer <= b.to_layer));
     const y = (layer) => PAD + layer * ROW + (bandOf(layer) + 1) * head;
     const x = (col) => PAD + col * (NW + GX);
+    const cols = d.columns ?? 1, span = bands.map(() => [Infinity, -Infinity]);
+    for (const n of d.nodes ?? []) { const r = span[bandOf(n.layer)]; if (r) { r[0] = Math.min(r[0], n.col); r[1] = Math.max(r[1], n.col); } }
+    const shift = span.map(([lo, hi]) => hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
     const at = new globalThis.Map();
-    for (const n of d.nodes ?? []) at.set(n.id, { n, x: x(n.col), y: y(n.layer) });
+    for (const n of d.nodes ?? []) at.set(n.id, { n, x: x(n.col + (shift[bandOf(n.layer)] ?? 0)), y: y(n.layer) });
     const width = x((d.columns ?? 1)) + PAD;
     const height = y(Math.max(0, (d.layers ?? 1) - 1)) + NH + PAD;
     const count = new globalThis.Map();
