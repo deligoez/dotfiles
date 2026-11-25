@@ -48,6 +48,8 @@ const lodOf = (s) => LODS.find(r => r >= s) ?? 2;
 const CELL = 800;
 // The most curve pieces one frame paints at full detail; past it, the coarse level.
 const MAX_PIECES = 15000;
+// How much of the map (px) a pan must leave in view, so it can't be lost.
+const KEEP = 120;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
@@ -279,7 +281,12 @@ export default class Map extends View {
         .child(btn("zoom-out", "−", () => { const v = this.view(); this.zoomAt(1 / 1.25, v.width / 2, v.height / 2); }))
         .child(div().text_size(11).text_color(t.dim).w(38).flex().justify_center().child(`${Math.round(s * 100)}%`))
         .child(btn("zoom-in", "+", () => { const v = this.view(); this.zoomAt(1.25, v.width / 2, v.height / 2); }))
-        .child(btn("zoom-fit", "Fit", () => { this.scale = this.fit(g, true); this.ox = 0; this.oy = 0; this.refresh(); })));
+        .child(btn("zoom-fit", "Fit", () => {
+          // The whole map, in the middle of the view.
+          const s = this.scale = this.fit(g, true), v = this.view();
+          this.ox = (g.width * s - v.width) / 2; this.oy = (g.height * s - v.height) / 2;
+          this.refresh();
+        })));
   }
 
   canvas(t, g) {
@@ -479,10 +486,12 @@ export default class Map extends View {
     const t = theme();
     const g = this.layout();
     if (g) {
-      // Keep the map in view: no panning past its edges.
-      const s = this.scale ?? 1, view = this.view();
-      this.ox = Math.max(0, Math.min(this.ox, g.width * s - view.width));
-      this.oy = Math.max(0, Math.min(this.oy, g.height * s - view.height));
+      // Pan freely, like a canvas: the map may sit anywhere in the view, even
+      // when it is smaller than the view, as long as KEEP px of it stay in sight.
+      const s = this.scale ?? 1, view = this.view(), mw = g.width * s, mh = g.height * s;
+      const kx = Math.min(KEEP, mw), ky = Math.min(KEEP, mh);
+      this.ox = Math.max(kx - view.width, Math.min(this.ox, mw - kx));
+      this.oy = Math.max(ky - view.height, Math.min(this.oy, mh - ky));
     }
     const root = v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground).relative()
       // Reported in window pixels; the layout's px are scaled by the app's zoom.
