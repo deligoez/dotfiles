@@ -51,6 +51,8 @@ const CELL = 800;
 const MAX_PIECES = 15000;
 // How much of the map (px) a pan must leave in view, so it can't be lost.
 const KEEP = 120;
+// The furthest out a zoom or Fit goes: a big map (700 epics) whole in a small pane.
+const MIN_ZOOM = 0.05;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
@@ -241,7 +243,7 @@ export default class Map extends View {
 
   // Scale by k around (px, py) in the visible area, so that point stays put.
   zoomAt(k, px, py) {
-    const s = this.scale ?? 1, next = Math.max(0.15, Math.min(2, s * k)), r = next / s;
+    const s = this.scale ?? 1, next = Math.max(MIN_ZOOM, Math.min(2, s * k)), r = next / s;
     this.ox = (this.ox + px) * r - px;
     this.oy = (this.oy + py) * r - py;
     this.scale = next;
@@ -301,7 +303,7 @@ export default class Map extends View {
   fit(g, whole) {
     const w = this.size.width - 4, h = this.size.height - 80;
     const s = whole ? Math.min(w / g.width, h / g.height) : w / g.width;
-    return Math.max(0.15, Math.min(1, s));
+    return Math.max(MIN_ZOOM, Math.min(1, s));
   }
 
   header(t, g) {
