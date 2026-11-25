@@ -625,8 +625,8 @@ export default class Map extends View {
       .when(Boolean(at), el => el.child(div().absolute().left(at.x * s - 1).top(at.y * s - 1).w(NW * s + 2).h(NH * s + 2)
         .rounded(3).border(2).border_color(t.foreground)))
       .children(labels.map(({ n, x, y }) => div().absolute().left(x * s + 5 * s).top(y * s).w((NW - 10) * s).h(NH * s)
-        .flex().flex_col().justify_center().font_family(MONO).text_size(10.5 * s).line_height(13 * s).text_color(t.foreground)
-        .children(wrapId(n.id).map(line => div().whitespace_nowrap().overflow_hidden().child(line)))));
+        .flex().flex_col().justify_center().font_family(MONO).text_size(10.5 * s).line_height(`${12.5 * s}px`).text_color(t.foreground)
+        .children(wrapId(n.id).map(line => div().w_full().whitespace_nowrap().child(line)))));
   }
 
   // The epic boxes as built paths, grouped by colour: fills [status, done, path],
