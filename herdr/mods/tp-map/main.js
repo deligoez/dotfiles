@@ -866,7 +866,12 @@ export default class Map extends View {
         // clears it), or clears on empty space.
         : dragPan(div().id("map-view").flex_1().min_h(0).relative().overflow_hidden(), this,
             (dx, dy, cx) => { this.ox -= dx; this.oy -= dy; this.moved(cx); },
-            (e, cx) => { const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx); })
+            (e, cx) => {
+              // A double-click zooms in on that spot (with Shift, out) and leaves
+              // the selection as the first click made it.
+              if (e.click_count >= 2) { this.moved(cx); const p = this.local(e); this.zoomAt(e.modifiers?.shift ? 1 / 1.6 : 1.6, p.x, p.y); cx.notify(); return; }
+              const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx);
+            })
           .on_pinch((e, cx) => { this.moved(cx); const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
             cx.stop_propagation();
