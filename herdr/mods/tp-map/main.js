@@ -249,7 +249,7 @@ export default class Map extends View {
     });
     for (const bl of lay) if (bl) cols = Math.max(cols, ...bl.map(b => b.w));   // a block wider than tp's map
     const layerCount = Math.max(1, d.layers ?? 1), deep = new Array(layerCount).fill(1);
-    const lines = rows.map(() => 1);
+    const lines = rows.map(() => 1), cuts = [];
     lay.forEach((bl, i) => {
       if (!bl) return;
       const rowLines = [[]];
@@ -261,6 +261,8 @@ export default class Map extends View {
       }
       rowLines.forEach((line, k) => {
         const end = line[line.length - 1], off = (cols - (end.at + end.w)) / 2;
+        // Between two blocks of a line, a divider in the middle of the gap.
+        for (const b of line.slice(1)) cuts.push({ i, k, col: off + b.at - GAP_COLS / 2 });
         // Each layer's epics side by side in tp's order, b.w to a sub-line, each
         // sub-line centred in the block.
         for (const b of line) for (const [layer, v] of b.layers) {
@@ -318,7 +320,12 @@ export default class Map extends View {
       }
       return { i, labels, lines: lines[i], lineH: lineH[i], top: y(r.from) - head, bottom: y(r.to, lines[i] - 1, (deep[r.to] ?? 1) - 1) + NH + 10 };
     });
-    return { at, width, height, bandBoxes, labelPx: px };
+    // A divider runs down its own line of its row only, header to last layer.
+    const dividers = cuts.map(({ i, k, col: c }) => {
+      const r = rows[i], x0 = x(c) - GX / 2;
+      return { x: x0, top: y(r.from, k) - head + 4, bottom: y(r.to, k, (deep[r.to] ?? 1) - 1) + NH + 6 };
+    });
+    return { at, width, height, bandBoxes, dividers, labelPx: px };
   }
 
   // The map's visible area: the pane under the header, less the detail panel.
@@ -505,6 +512,7 @@ export default class Map extends View {
         // Each milestone's name and count stay readable at any zoom.
         .children(labels.map(l => div().absolute().left(l.x * s).top(2 + (l.dy ?? 0) * s).whitespace_nowrap()
           .text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted).child(l.text)))))
+      .children(g.dividers.map(v => div().absolute().left(v.x * s).top(v.top * s).w(1).h((v.bottom - v.top) * s).bg(t.border)))
       .children(strokes.map(([k, path]) => paint(path, stroke[k])))
       .children(boxes.fills.map(([st, done, path]) => paint(path, Background.solid(look(t, st)[0]).opacity(done ? 0.25 : 0.4))))
       .children(boxes.borders.map(([st, path]) => paint(path, Background.solid(look(t, st)[0]))))
