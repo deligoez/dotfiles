@@ -318,6 +318,14 @@ export default class Map extends View {
         .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${(this.data.bands ?? []).length} milestones`)))
       .child(div().flex_1())
       .when(Boolean(reloadedNote(t, this)), el => el.child(reloadedNote(t, this)))
+      // What the colours mean: shown while the pointer is on the button, kept
+      // open by a click (another click closes it).
+      .when(nodes.length > 0, el => el.child(div().id("legend-btn").px(7).h(22).flex().items_center().rounded(5).text_size(12).cursor_pointer()
+        .text_color(this.legendOpen ? t.foreground : t.muted).when(this.legendOpen, d => d.bg(t.hover))
+        .hover(s => s.bg(t.hover).text_color(t.foreground))
+        .on_hover((h, cx) => { if (this.legendHover !== h) { this.legendHover = h; cx.notify(); } })
+        .on_click((_e, cx) => { this.legendOpen = !this.legendOpen; cx.notify(); })
+        .child("Legend")))
       .when(nodes.length > 0, el => el.child(h_flex().id("search").w(220).h(24).px(7).gap(6).items_center().rounded(6)
         .border_1().border_color(this.query ? t.accent : t.border).bg(t.background)
         .on_key_down((e, cx) => {
@@ -563,6 +571,41 @@ export default class Map extends View {
     return this.found.hits;
   }
 
+  // The colours' key, under the header's right side: each status as its box is
+  // drawn (counted on this map), then the curves and the hold mark.
+  legend(t) {
+    const nodes = this.data?.nodes ?? [], n = (st) => nodes.filter(x => (x.status ?? x.state) === st).length;
+    const box = (c, done) => div().w(22).h(10).flex_none().rounded(2).border_1().border_color(c).bg(c).opacity(done ? 0.5 : 0.8);
+    const line = (c, w, o) => div().w(22).h(w).flex_none().bg(c).opacity(o);
+    const row = (mark, label, count) => h_flex().h(20).gap(8).items_center()
+      .child(h_flex().w(22).flex_none().justify_center().child(mark))
+      .child(div().flex_1().text_color(t.foreground).child(label))
+      .when(count != null, el => el.child(div().flex_none().text_size(11).text_color(t.dim).child(String(count))));
+    const head = (s) => div().pt(6).pb(2).text_size(10.5).text_color(t.dim).child(s);
+    const statuses = [
+      ["ready", "Ready: its dependencies are done, can start"],
+      ["held", "Held: waits on a decision (a condition epic)"],
+      ["blocked", "Blocked: a dependency isn't done"],
+      ["waiting", "Waiting: its milestone isn't open yet"],
+      ["moot", "Moot: an alternative not taken"],
+      ["claimed", "Claimed"], ["specced", "Specced"], ["in_progress", "In progress"],
+      ["done", "Done"],
+    ].filter(([st]) => n(st) > 0 || ["ready", "held", "blocked", "done"].includes(st));
+    return v_flex().id("legend").absolute().top(34).right(10).w(330).px(10).pb(8).rounded(8)
+      .border_1().border_color(t.border).bg(t.popover).text_size(12)
+      .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+      .on_scroll_wheel((_e, cx) => cx.stop_propagation())
+      .child(head("EPICS"))
+      .children(statuses.map(([st, label]) => row(box(look(t, st)[0], st === "done"), label, n(st))))
+      .child(head("CURVES"))
+      .child(row(line(t.blocked, 2, 0.75), "Critical path: the longest chain still open"))
+      .child(row(line(t.dim, 1, 0.6), "Depends on (from above to below)"))
+      .child(row(line(t.accent, 2, 1), "The selected epic's links"))
+      .child(head("MARK"))
+      .child(row(h_flex().w(22).h(10).flex_none().justify_end().border_1().border_color(t.working).child(div().w(4).h_full().bg(t.blocked)),
+        "Started but held (red) or blocked (grey)"));
+  }
+
   // The search's results, under the box. Mouse downs stop here, so a click on a
   // row doesn't also reach the map underneath (a pan, or a select there).
   results(t) {
@@ -628,7 +671,9 @@ export default class Map extends View {
           })
           .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy))));
     // Last, so the results draw over the map.
-    return root.when(Boolean(this.query && this.listOpen && g), el => el.child(this.results(t)));
+    const results = Boolean(this.query && this.listOpen && g);
+    return root.when(results, el => el.child(this.results(t)))
+      .when(!results && Boolean(g) && (this.legendOpen || this.legendHover), el => el.child(this.legend(t)));
   }
 
   // The map, and beside or under it the selected epic.
