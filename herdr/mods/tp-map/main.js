@@ -209,12 +209,11 @@ export default class Map extends View {
   // and every row of the map gets that layer's extra height. Blocks that don't
   // fit in tp's width wrap onto another line below, like text, so the map never
   // grows wider than tp drew it (13 milestones on layers 69-79 needed 103 columns
-  // of 77). Each line is centred.
+  // of 77). Each line is centred, which also brings a small row in from the far
+  // edge (tp put the first milestone's few roots far right, over the rest).
   //
-  // A row of one milestone keeps tp's columns in tp's order but drops the empty
-  // ones: tp spread 05-ilk-yayin over 42 columns with wide empty runs, which read
-  // as separate milestones. The row is then centred, which also brings a small
-  // row in from the far edge (tp put the first milestone's few roots far right).
+  // A row of one milestone is one block too: tp spread 05-ilk-yayin over 42
+  // columns with wide empty runs, which read as separate milestones.
   geometry(s = 1) {
     const d = this.data, bands = d.bands ?? [], nodes = d.nodes ?? [], head = Math.max(BAND_HEAD, 15 / s);
     const rows = [];
@@ -239,7 +238,7 @@ export default class Map extends View {
     // down once a block wraps; tp's own order (mean column) bent the fewest
     // (12 of 3713 in siyakat, 17 with a dependency-first order).
     const lay = byRow.map((ms) => {
-      if (ms.size < 2) return null;
+      if (!ms.size) return null;
       return [...ms.values()].map(l => {
         const layers = new globalThis.Map();
         for (const n of l) { if (!layers.has(n.layer)) layers.set(n.layer, []); layers.get(n.layer).push(n); }
@@ -275,14 +274,6 @@ export default class Map extends View {
         }
       });
       lines[i] = rowLines.length;
-    });
-    // A row of one milestone keeps tp's columns and their order, less the empty
-    // ones, centred.
-    byRow.forEach((ms) => {
-      if (ms.size !== 1) return;
-      const l = [...ms.values()][0], used = [...new Set(l.map(n => n.col))].sort((a, b) => a - b);
-      const idx = new globalThis.Map(used.map((c, q) => [c, q])), off = (cols - used.length) / 2;
-      for (const n of l) colOf.set(n.id, off + idx.get(n.col));
     });
     // A layer's top: the layers above it, each as tall as its deepest fold.
     const top = [0];
