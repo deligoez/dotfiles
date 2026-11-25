@@ -186,27 +186,58 @@ export default class Map extends View {
     this.refresh();
   }
 
-  // Where everything goes at scale 1: rows by layer, a header above each milestone band.
-  // A band's header keeps at least 15 screen px for its name, whatever the zoom.
-  // tp packs a band's columns toward where its edges lead, which can leave a
-  // small band alone at the far edge (the first milestone's few roots, far right
-  // over the rest). A band narrower than half the map moves to its middle.
+  // Where everything goes at scale 1: rows by layer, a header above each band row.
+  // A header keeps at least 15 screen px for its names, whatever the zoom.
+  //
+  // tp's bands can share layers: a band may carry others in `with` (merged), and
+  // separate bands can overlap (02 on layers 4-13, 03 on 4-12, 04 on 13-15). Bands
+  // that share a layer, directly or through another, form one row: one header,
+  // one background, and in the header every milestone's own name and count, each
+  // over its leftmost epic (pushed right where two would collide), so no count
+  // reads as another's and no name sits on top of another.
+  //
+  // tp packs a row's columns toward where its edges lead, which can leave a small
+  // row alone at the far edge (the first milestone's few roots, far right over
+  // the rest). A row narrower than half the map moves to its middle.
   geometry(s = 1) {
-    const d = this.data, bands = d.bands ?? [], head = Math.max(BAND_HEAD, 15 / s);
-    const bandOf = (layer) => Math.max(0, bands.findIndex(b => layer >= b.from_layer && layer <= b.to_layer));
-    const y = (layer) => PAD + layer * ROW + (bandOf(layer) + 1) * head;
+    const d = this.data, bands = d.bands ?? [], nodes = d.nodes ?? [], head = Math.max(BAND_HEAD, 15 / s);
+    const rows = [];
+    for (const b of [...bands].sort((a, c) => a.from_layer - c.from_layer)) {
+      const r = rows[rows.length - 1];
+      if (r && b.from_layer <= r.to) { r.to = Math.max(r.to, b.to_layer); r.bands.push(b); }
+      else rows.push({ from: b.from_layer, to: b.to_layer, bands: [b] });
+    }
+    const rowOf = (layer) => Math.max(0, rows.findIndex(r => layer >= r.from && layer <= r.to));
+    const y = (layer) => PAD + layer * ROW + (rowOf(layer) + 1) * head;
     const x = (col) => PAD + col * (NW + GX);
-    const cols = d.columns ?? 1, span = bands.map(() => [Infinity, -Infinity]);
-    for (const n of d.nodes ?? []) { const r = span[bandOf(n.layer)]; if (r) { r[0] = Math.min(r[0], n.col); r[1] = Math.max(r[1], n.col); } }
+    const cols = d.columns ?? 1, span = rows.map(() => [Infinity, -Infinity]);
+    for (const n of nodes) { const r = span[rowOf(n.layer)]; if (r) { r[0] = Math.min(r[0], n.col); r[1] = Math.max(r[1], n.col); } }
     const shift = span.map(([lo, hi]) => hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
     const at = new globalThis.Map();
-    for (const n of d.nodes ?? []) at.set(n.id, { n, x: x(n.col + (shift[bandOf(n.layer)] ?? 0)), y: y(n.layer) });
+    for (const n of nodes) at.set(n.id, { n, x: x(n.col + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer) });
     const width = x((d.columns ?? 1)) + PAD;
     const height = y(Math.max(0, (d.layers ?? 1) - 1)) + NH + PAD;
-    const count = new globalThis.Map();
-    for (const n of d.nodes ?? []) count.set(n.milestone, (count.get(n.milestone) ?? 0) + 1);
-    const bandBoxes = bands.map((b, i) => ({ b, i, n: count.get(b.milestone) ?? 0, top: y(b.from_layer) - head, bottom: y(b.to_layer) + NH + 10 }));
-    return { at, width, height, bandBoxes };
+    const count = new globalThis.Map(), left = new globalThis.Map();
+    for (const { n, x: nx } of at.values()) {
+      count.set(n.milestone, (count.get(n.milestone) ?? 0) + 1);
+      left.set(n.milestone, Math.min(left.get(n.milestone) ?? Infinity, nx));
+    }
+    // A label's width in layout units, from its text size on screen.
+    const px = Math.max(9.5, 11 * Math.min(s, 1)), wide = (text) => (text.length * px * 0.6 + 14) / s;
+    const bandBoxes = rows.map((r, i) => {
+      const labels = r.bands.flatMap(b => [b.milestone, ...(b.with ?? [])])
+        .map(m => ({ text: `${m} · ${count.get(m) ?? 0}`, x: r.bands.length === 1 && !(r.bands[0].with ?? []).length ? PAD : (left.get(m) ?? PAD) }))
+        .sort((a, b) => a.x - b.x);
+      // Push each right of the one before; then, from the right edge back, pull
+      // the ones pushed off the map left again (several milestones can start at
+      // the far right: 03, 01 and 04 all sit in the last columns).
+      let end = -Infinity;
+      for (const l of labels) { l.x = Math.max(l.x, end); end = l.x + wide(l.text); }
+      let limit = width - PAD;
+      for (const l of [...labels].reverse()) { l.x = Math.max(PAD, Math.min(l.x, limit - wide(l.text))); limit = l.x; }
+      return { i, labels, top: y(r.from) - head, bottom: y(r.to) + NH + 10 };
+    });
+    return { at, width, height, bandBoxes, labelPx: px };
   }
 
   // The map's visible area: the pane under the header, less the detail panel.
@@ -315,7 +346,7 @@ export default class Map extends View {
     return h_flex().h(34).px(10).gap(8).items_center().flex_none().border_b(1).border_color(t.border)
       .child(div().text_size(12.5).text_color(t.foreground).child("Epics"))
       .when(nodes.length > 0, el => el.child(div().text_size(11).text_color(t.muted)
-        .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${(this.data.bands ?? []).length} milestones`)))
+        .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${new Set(nodes.map(n => n.milestone)).size} milestones`)))
       .child(div().flex_1())
       .when(Boolean(reloadedNote(t, this)), el => el.child(reloadedNote(t, this)))
       // What the colours mean: shown while the pointer is on the button, kept
@@ -388,11 +419,11 @@ export default class Map extends View {
     // colour), not hundreds of elements: a render then costs the same at any
     // zoom, which keeps panning smooth. The viewport finds the epic under a click (hit()).
     return div().relative().w(g.width * s).h(g.height * s).flex_none()
-      .children(g.bandBoxes.map(({ b, i, n, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
+      .children(g.bandBoxes.map(({ i, labels, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
         .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
-        // The milestone's name stays readable at any zoom.
-        .child(div().absolute().left(PAD * s).top(2).text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted)
-          .child(`${b.milestone} · ${n}`))))
+        // Each milestone's name and count stay readable at any zoom.
+        .children(labels.map(l => div().absolute().left(l.x * s).top(2).whitespace_nowrap()
+          .text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted).child(l.text)))))
       .children(strokes.map(([k, path]) => paint(path, stroke[k])))
       .children(boxes.fills.map(([st, done, path]) => paint(path, Background.solid(look(t, st)[0]).opacity(done ? 0.25 : 0.4))))
       .children(boxes.borders.map(([st, path]) => paint(path, Background.solid(look(t, st)[0]))))
