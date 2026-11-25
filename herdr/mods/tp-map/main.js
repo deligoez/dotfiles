@@ -53,6 +53,8 @@ const MAX_PIECES = 15000;
 const KEEP = 120;
 // The furthest out a zoom or Fit goes: a big map (700 epics) whole in a small pane.
 const MIN_ZOOM = 0.05;
+// Empty columns between two milestones' blocks in a shared row.
+const GAP_COLS = 2;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
@@ -196,6 +198,14 @@ export default class Map extends View {
   // over its leftmost epic (pushed right where two would collide), so no count
   // reads as another's and no name sits on top of another.
   //
+  // In a row of several milestones tp interleaves their epics in the same
+  // columns. Each milestone gets its own block of columns instead: blocks left to
+  // right by where tp put the milestone (its mean column), each as narrow as the
+  // milestone's fullest layer, GAP_COLS empty columns between blocks. Blocks that
+  // don't fit in tp's width wrap onto another line below, like text, so the map
+  // never grows wider than tp drew it (13 milestones on layers 69-79 needed 103
+  // columns of 77). Each line is centred. A row of one milestone keeps tp's columns.
+  //
   // tp packs a row's columns toward where its edges lead, which can leave a small
   // row alone at the far edge (the first milestone's few roots, far right over
   // the rest). A row narrower than half the map moves to its middle.
@@ -208,34 +218,86 @@ export default class Map extends View {
       else rows.push({ from: b.from_layer, to: b.to_layer, bands: [b] });
     }
     const rowOf = (layer) => Math.max(0, rows.findIndex(r => layer >= r.from && layer <= r.to));
-    const y = (layer) => PAD + layer * ROW + (rowOf(layer) + 1) * head;
     const x = (col) => PAD + col * (NW + GX);
-    const cols = d.columns ?? 1, span = rows.map(() => [Infinity, -Infinity]);
-    for (const n of nodes) { const r = span[rowOf(n.layer)]; if (r) { r[0] = Math.min(r[0], n.col); r[1] = Math.max(r[1], n.col); } }
-    const shift = span.map(([lo, hi]) => hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
+    const colOf = new globalThis.Map(), lineOf = new globalThis.Map(), byRow = rows.map(() => new globalThis.Map());
+    for (const n of nodes) {
+      const m = byRow[rowOf(n.layer)];
+      if (!m) continue;
+      if (!m.has(n.milestone)) m.set(n.milestone, []);
+      m.get(n.milestone).push(n);
+    }
+    const blocked = rows.map((_r, i) => byRow[i].size > 1);
+    let cols = d.columns ?? 1;
+    // Milestones in a row can wait on each other both ways (an epic of A on one
+    // of B and another of B on one of A), so no order keeps every edge pointing
+    // down once a block wraps; tp's own order (mean column) bent the fewest
+    // (12 of 3713 in siyakat, 17 with a dependency-first order).
+    const lay = byRow.map((ms) => {
+      if (ms.size < 2) return null;
+      return [...ms.values()].map(l => {
+        const layers = new globalThis.Map();
+        for (const n of l) { if (!layers.has(n.layer)) layers.set(n.layer, []); layers.get(n.layer).push(n); }
+        return { l, layers, w: Math.max(...[...layers.values()].map(v => v.length)), mean: l.reduce((a, n) => a + n.col, 0) / l.length };
+      }).sort((a, b) => a.mean - b.mean);
+    });
+    for (const bl of lay) if (bl) cols = Math.max(cols, ...bl.map(b => b.w));   // a block wider than tp's map
+    const lines = rows.map(() => 1);
+    lay.forEach((bl, i) => {
+      if (!bl) return;
+      const rowLines = [[]];
+      let next = 0;
+      for (const b of bl) {
+        if (next > 0 && next + b.w > cols) { rowLines.push([]); next = 0; }
+        b.at = next; rowLines[rowLines.length - 1].push(b);
+        next += b.w + GAP_COLS;
+      }
+      rowLines.forEach((line, k) => {
+        const end = line[line.length - 1], off = (cols - (end.at + end.w)) / 2;
+        // Each layer's epics side by side in tp's order, centred in the block.
+        for (const b of line) for (const v of b.layers.values()) v.sort((p, q) => p.col - q.col)
+          .forEach((n, j) => { colOf.set(n.id, off + b.at + (b.w - v.length) / 2 + j); lineOf.set(n.id, k); });
+      });
+      lines[i] = rowLines.length;
+    });
+    // A row's line is its layers plus a header; lines after the first push later rows down.
+    const lineH = rows.map(r => (r.to - r.from + 1) * ROW + head);
+    const extra = [];
+    rows.forEach((_r, i) => { extra.push(i ? extra[i - 1] + (lines[i - 1] - 1) * lineH[i - 1] : 0); });
+    const y = (layer, line = 0) => { const i = rowOf(layer); return PAD + layer * ROW + (i + 1) * head + (extra[i] ?? 0) + line * (lineH[i] ?? 0); };
+    const col = (n) => colOf.get(n.id) ?? n.col;
+    const span = rows.map(() => [Infinity, -Infinity]);
+    for (const n of nodes) { const r = span[rowOf(n.layer)]; if (r) { r[0] = Math.min(r[0], col(n)); r[1] = Math.max(r[1], col(n)); } }
+    const shift = span.map(([lo, hi], i) => !blocked[i] && hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
     const at = new globalThis.Map();
-    for (const n of nodes) at.set(n.id, { n, x: x(n.col + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer) });
-    const width = x((d.columns ?? 1)) + PAD;
-    const height = y(Math.max(0, (d.layers ?? 1) - 1)) + NH + PAD;
+    for (const n of nodes) at.set(n.id, { n, x: x(col(n) + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer, lineOf.get(n.id) ?? 0) });
+    const width = x(cols) + PAD;
+    const lastLayer = Math.max(0, (d.layers ?? 1) - 1);
+    const height = y(lastLayer, lines[rowOf(lastLayer)] - 1) + NH + PAD;
     const count = new globalThis.Map(), left = new globalThis.Map();
     for (const { n, x: nx } of at.values()) {
       count.set(n.milestone, (count.get(n.milestone) ?? 0) + 1);
       left.set(n.milestone, Math.min(left.get(n.milestone) ?? Infinity, nx));
     }
+    const lineOfMs = new globalThis.Map();
+    for (const n of nodes) if (lineOf.has(n.id)) lineOfMs.set(n.milestone, lineOf.get(n.id));
     // A label's width in layout units, from its text size on screen.
     const px = Math.max(9.5, 11 * Math.min(s, 1)), wide = (text) => (text.length * px * 0.6 + 14) / s;
     const bandBoxes = rows.map((r, i) => {
-      const labels = r.bands.flatMap(b => [b.milestone, ...(b.with ?? [])])
-        .map(m => ({ text: `${m} · ${count.get(m) ?? 0}`, x: r.bands.length === 1 && !(r.bands[0].with ?? []).length ? PAD : (left.get(m) ?? PAD) }))
-        .sort((a, b) => a.x - b.x);
-      // Push each right of the one before; then, from the right edge back, pull
-      // the ones pushed off the map left again (several milestones can start at
-      // the far right: 03, 01 and 04 all sit in the last columns).
-      let end = -Infinity;
-      for (const l of labels) { l.x = Math.max(l.x, end); end = l.x + wide(l.text); }
-      let limit = width - PAD;
-      for (const l of [...labels].reverse()) { l.x = Math.max(PAD, Math.min(l.x, limit - wide(l.text))); limit = l.x; }
-      return { i, labels, top: y(r.from) - head, bottom: y(r.to) + NH + 10 };
+      const all = r.bands.flatMap(b => [b.milestone, ...(b.with ?? [])]);
+      const labels = [];
+      for (let k = 0; k < lines[i]; k++) {
+        const mine = all.filter(m => (lineOfMs.get(m) ?? 0) === k)
+          .map(m => ({ text: `${m} · ${count.get(m) ?? 0}`, dy: k * lineH[i], x: all.length === 1 ? PAD : (left.get(m) ?? PAD) }))
+          .sort((a, b) => a.x - b.x);
+        // Push each right of the one before; then, from the right edge back,
+        // pull the ones pushed off the map left again.
+        let end = -Infinity;
+        for (const l of mine) { l.x = Math.max(l.x, end); end = l.x + wide(l.text); }
+        let limit = width - PAD;
+        for (const l of [...mine].reverse()) { l.x = Math.max(PAD, Math.min(l.x, limit - wide(l.text))); limit = l.x; }
+        labels.push(...mine);
+      }
+      return { i, labels, lines: lines[i], lineH: lineH[i], top: y(r.from) - head, bottom: y(r.to, lines[i] - 1) + NH + 10 };
     });
     return { at, width, height, bandBoxes, labelPx: px };
   }
@@ -422,7 +484,7 @@ export default class Map extends View {
       .children(g.bandBoxes.map(({ i, labels, top, bottom }) => div().absolute().left(0).top(top * s).w(g.width * s).h((bottom - top) * s)
         .bg(i % 2 ? t.surface : t.background).border_t(1).border_color(t.border)
         // Each milestone's name and count stay readable at any zoom.
-        .children(labels.map(l => div().absolute().left(l.x * s).top(2).whitespace_nowrap()
+        .children(labels.map(l => div().absolute().left(l.x * s).top(2 + (l.dy ?? 0) * s).whitespace_nowrap()
           .text_size(Math.max(9.5, 11 * Math.min(s, 1))).text_color(t.muted).child(l.text)))))
       .children(strokes.map(([k, path]) => paint(path, stroke[k])))
       .children(boxes.fills.map(([st, done, path]) => paint(path, Background.solid(look(t, st)[0]).opacity(done ? 0.25 : 0.4))))
