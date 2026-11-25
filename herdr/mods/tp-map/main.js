@@ -214,8 +214,42 @@ export default class Map extends View {
   //
   // A row of one milestone is one block too: tp spread 05-ilk-yayin over 42
   // columns with wide empty runs, which read as separate milestones.
+  //
+  // A tp that lays this out itself (`rows`, `blocks`, `dividers`, nodes[].x/y)
+  // is followed as given; the code below is for a tp that doesn't yet.
   geometry(s = 1) {
     const d = this.data, bands = d.bands ?? [], nodes = d.nodes ?? [], head = Math.max(BAND_HEAD, 15 / s);
+    if (d.rows?.length && d.blocks && nodes.every(n => n.x != null && n.y != null)) {
+      // tp's x is a column index (0 to columns-1, a half where a block centres an
+      // epic); its y a layer row, every line's header one row of its own. A
+      // header row is drawn `head` high, the rest ROW.
+      const U = NW + GX, X = (c) => PAD + c * U;
+      const heads = [...new Set(d.blocks.map(b => b.line_y))].sort((a, b) => a - b);
+      const Y = (y) => { let k = 0; while (k < heads.length && heads[k] < y) k++; return PAD + y * ROW + k * (head - ROW); };
+      const at = new globalThis.Map(nodes.map(n => [n.id, { n, x: X(n.x), y: Y(n.y) }]));
+      const width = X(d.columns ?? 1) + PAD, height = Y(Math.max(0, (d.height ?? 1) - 1)) + NH + PAD;
+      const px = Math.max(9.5, 11 * Math.min(s, 1)), wide = (text) => (text.length * px * 0.6 + 14) / s;
+      const bandBoxes = d.rows.map((r, i) => {
+        const top = Y(r.from_y), labels = [];
+        const lines = new globalThis.Map();
+        for (const b of d.blocks.filter(b => b.row === i)) {
+          if (!lines.has(b.line)) lines.set(b.line, []);
+          lines.get(b.line).push({ text: `${b.milestone} · ${b.count}`, dy: Y(b.line_y) - top, x: X(b.from_col) });
+        }
+        // Same de-overlap as below: push right, then pull back in from the edge.
+        for (const mine of lines.values()) {
+          mine.sort((a, b) => a.x - b.x);
+          let end = -Infinity;
+          for (const l of mine) { l.x = Math.max(l.x, end); end = l.x + wide(l.text); }
+          let limit = width - PAD;
+          for (const l of [...mine].reverse()) { l.x = Math.max(PAD, Math.min(l.x, limit - wide(l.text))); limit = l.x; }
+          labels.push(...mine);
+        }
+        return { i, labels, top, bottom: Y(r.to_y) + NH + 10 };
+      });
+      const dividers = (d.dividers ?? []).map(v => ({ x: X(v.x) + NW / 2, top: Y(v.from_y) + 4, bottom: Y(v.to_y) + NH + 6 }));
+      return { at, width, height, bandBoxes, dividers, labelPx: px };
+    }
     const rows = [];
     for (const b of [...bands].sort((a, c) => a.from_layer - c.from_layer)) {
       const r = rows[rows.length - 1];
