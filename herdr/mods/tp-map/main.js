@@ -209,11 +209,11 @@ export default class Map extends View {
   // and every row of the map gets that layer's extra height. Blocks that don't
   // fit in tp's width wrap onto another line below, like text, so the map never
   // grows wider than tp drew it (13 milestones on layers 69-79 needed 103 columns
-  // of 77). Each line is centred. A row of one milestone keeps tp's columns.
+  // of 77). Each line is centred, which also brings a small row in from the far
+  // edge (tp put the first milestone's few roots far right, over the rest).
   //
-  // tp packs a row's columns toward where its edges lead, which can leave a small
-  // row alone at the far edge (the first milestone's few roots, far right over
-  // the rest). A row narrower than half the map moves to its middle.
+  // A row of one milestone is one block too: tp spread 05-ilk-yayin over 42
+  // columns with wide empty runs, which read as separate milestones.
   geometry(s = 1) {
     const d = this.data, bands = d.bands ?? [], nodes = d.nodes ?? [], head = Math.max(BAND_HEAD, 15 / s);
     const rows = [];
@@ -232,14 +232,13 @@ export default class Map extends View {
       if (!m.has(n.milestone)) m.set(n.milestone, []);
       m.get(n.milestone).push(n);
     }
-    const blocked = rows.map((_r, i) => byRow[i].size > 1);
     let cols = d.columns ?? 1;
     // Milestones in a row can wait on each other both ways (an epic of A on one
     // of B and another of B on one of A), so no order keeps every edge pointing
     // down once a block wraps; tp's own order (mean column) bent the fewest
     // (12 of 3713 in siyakat, 17 with a dependency-first order).
     const lay = byRow.map((ms) => {
-      if (ms.size < 2) return null;
+      if (!ms.size) return null;
       return [...ms.values()].map(l => {
         const layers = new globalThis.Map();
         for (const n of l) { if (!layers.has(n.layer)) layers.set(n.layer, []); layers.get(n.layer).push(n); }
@@ -286,11 +285,8 @@ export default class Map extends View {
     rows.forEach((_r, i) => { extra.push(i ? extra[i - 1] + (lines[i - 1] - 1) * lineH[i - 1] : 0); });
     const y = (layer, line = 0, sub = 0) => { const i = rowOf(layer); return PAD + ly(layer) + sub * ROW + (i + 1) * head + (extra[i] ?? 0) + line * (lineH[i] ?? 0); };
     const col = (n) => colOf.get(n.id) ?? n.col;
-    const span = rows.map(() => [Infinity, -Infinity]);
-    for (const n of nodes) { const r = span[rowOf(n.layer)]; if (r) { r[0] = Math.min(r[0], col(n)); r[1] = Math.max(r[1], col(n)); } }
-    const shift = span.map(([lo, hi], i) => !blocked[i] && hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
     const at = new globalThis.Map();
-    for (const n of nodes) at.set(n.id, { n, x: x(col(n) + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer, lineOf.get(n.id) ?? 0, subOf.get(n.id) ?? 0) });
+    for (const n of nodes) at.set(n.id, { n, x: x(col(n)), y: y(n.layer, lineOf.get(n.id) ?? 0, subOf.get(n.id) ?? 0) });
     const width = x(cols) + PAD;
     const lastLayer = Math.max(0, (d.layers ?? 1) - 1);
     const height = y(lastLayer, lines[rowOf(lastLayer)] - 1, (deep[lastLayer] ?? 1) - 1) + NH + PAD;
@@ -308,7 +304,7 @@ export default class Map extends View {
       const labels = [];
       for (let k = 0; k < lines[i]; k++) {
         const mine = all.filter(m => (lineOfMs.get(m) ?? 0) === k)
-          .map(m => ({ text: `${m} · ${count.get(m) ?? 0}`, dy: k * lineH[i], x: all.length === 1 ? PAD : (left.get(m) ?? PAD) }))
+          .map(m => ({ text: `${m} · ${count.get(m) ?? 0}`, dy: k * lineH[i], x: left.get(m) ?? PAD }))
           .sort((a, b) => a.x - b.x);
         // Push each right of the one before; then, from the right edge back,
         // pull the ones pushed off the map left again.
