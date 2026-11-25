@@ -56,7 +56,7 @@ const MIN_ZOOM = 0.05;
 // Empty columns between two milestones' blocks in a shared row.
 const GAP_COLS = 2;
 // The widest a milestone's block grows before a layer folds onto sub-lines.
-const FOLD = 10;
+const FOLD = 8;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
