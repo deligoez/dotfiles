@@ -3,9 +3,10 @@
 // dependency curves, the critical path), read-only and live. Pinch (or Cmd/Ctrl and
 // the wheel, or − / + / Fit) zooms, two fingers or a press and drag pan; click an epic to light up its
 // dependencies and read it (description, acceptance, why it waits) in a panel.
+// The search box in the header's corner finds an epic by a fuzzy match and goes to it.
 // Opened from the tab bar's Epics button; see ./tp.js.
-import { View, div, PathBuilder, Background } from "gpui-kit";
-import { v_flex, h_flex } from "gpui-base";
+import { View, div, svg, PathBuilder, Background } from "gpui-kit";
+import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, settings, props, watchFolder, checking, exec } from "herdr";
 import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
 
@@ -71,8 +72,33 @@ const downstream = (n) => {
   return d ? `${d.dependents_open} of ${d.dependents} dependents open · longest chain ${d.longest_chain}` : null;
 };
 
+// Fuzzy search over an epic's title, id and milestone: case, Turkish dotless i
+// and accents folded. The query's letters must appear in order; runs of them,
+// word starts and a plain substring score higher, a long gap lower.
+const fold = (s) => String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").replace(/ı/g, "i").toLowerCase();
+function fuzzy(q, text) {
+  let at = 0, run = 0, score = text.includes(q) ? 20 : 0;
+  for (const c of q) {
+    if (c === " ") continue;
+    const i = text.indexOf(c, at);
+    if (i < 0) return -1;
+    run = i === at ? run + 1 : 0;
+    const start = i === 0 || /[\s\-_/·.,:()]/.test(text[i - 1]);
+    score += 1 + run * 2 + (start ? 3 : 0) - Math.min(3, (i - at) * 0.1);
+    at = i + 1;
+  }
+  return score - text.length * 0.005;
+}
+const HITS = 8;
+
 export default class Map extends View {
   init(_props, cx) {
+    // The search box in the header's corner: type to list matching epics,
+    // ↑/↓ and Enter (or a click) to go to one, which folds the list; Esc clears.
+    this.query = ""; this.at = 0; this.listOpen = false;
+    this.search = InputState.new({ placeholder: "Search epics…" });
+    this.search.on("change", (_e, cx) => { this.query = fold(this.search.value().trim()); this.at = 0; this.listOpen = true; cx.notify(); });
+    this.search.on("submit", (_e, cx) => { const h = this.hits()[this.at]; if (h) this.goTo(h.n.id, cx, true); });
     this.root = props()?.root ?? null;
     this.data = null;
     this.error = null;
@@ -103,7 +129,7 @@ export default class Map extends View {
     }
   }
 
-  async close() { for (const w of this.watches) w.cancel(); }
+  async close() { for (const w of this.watches) w.cancel(); this.search?.release(); }
 
   // One load at a time (a burst of watch events is one more load). The same
   // layout as last time changes nothing: no parse, no new paths.
@@ -283,6 +309,21 @@ export default class Map extends View {
       .when(nodes.length > 0, el => el.child(div().text_size(11).text_color(t.muted)
         .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${(this.data.bands ?? []).length} milestones`)))
       .child(div().flex_1())
+      .when(nodes.length > 0, el => el.child(h_flex().id("search").w(220).h(24).px(7).gap(6).items_center().rounded(6)
+        .border_1().border_color(this.query ? t.accent : t.border).bg(t.background)
+        .on_key_down((e, cx) => {
+          const n = this.hits().length;
+          if (e.key === "escape") { this.search.set_value(""); this.query = ""; this.search.blur(); }
+          // The first arrow after a pick shows the list again, where it was.
+          else if ((e.key === "down" || e.key === "up") && n && !this.listOpen) this.listOpen = true;
+          else if (e.key === "down" && n) this.at = (this.at + 1) % n;
+          else if (e.key === "up" && n) this.at = (this.at + n - 1) % n;
+          else return;
+          cx.stop_propagation();
+          cx.notify();
+        })
+        .child(svg("mods/workspace-chrome/search.svg").size(12).flex_none().text_color(t.dim))
+        .child(Input.new(this.search).flex_1().h_full().text_size(12).text_color(t.foreground))))
       .when(Boolean(g), el => el
         .child(btn("zoom-out", "−", () => { const v = this.view(); this.zoomAt(1 / 1.25, v.width / 2, v.height / 2); }))
         .child(div().text_size(11).text_color(t.dim).w(38).flex().justify_center().child(`${Math.round(s * 100)}%`))
@@ -476,16 +517,62 @@ export default class Map extends View {
       links: [["After", ins], ["Frees", outs]],
       sections: [["Description", e.description], ["Acceptance", e.acceptance], ["Why it waits", whys]],
     };
-    // A linked epic is selected and brought to the middle of the view.
-    const pick = (id, cx) => {
-      const b = g.at.get(id);
-      if (!b) return;
-      const s = this.scale ?? 1, v = this.view();
-      this.ox = (b.x + NW / 2) * s - v.width / 2;
-      this.oy = (b.y + NH / 2) * s - v.height / 2;
-      this.select(id, cx);
-    };
-    return detailPanel(t, this.pane(), d, pick, () => { this.selected = null; this.refresh(); });
+    return detailPanel(t, this.pane(), d, (id, cx) => this.goTo(id, cx), () => { this.selected = null; this.refresh(); });
+  }
+
+  // Select an epic and bring it to the middle of the view; from a search, also
+  // zoom in far enough to read its name.
+  goTo(id, cx, readable) {
+    if (readable && (this.scale ?? 1) < 0.8) { this.scale = 0.8; this.refresh(); }
+    const g = this.layout(), b = g?.at.get(id);
+    if (!b) return;
+    // Select first: the detail panel it opens narrows the view to center in.
+    this.select(id, cx);
+    if (readable) this.listOpen = false;
+    const s = this.scale ?? 1, v = this.view();
+    this.ox = (b.x + NW / 2) * s - v.width / 2;
+    this.oy = (b.y + NH / 2) * s - v.height / 2;
+    cx.notify();
+  }
+
+  // The epics the search box matches, best first.
+  hits() {
+    const q = this.query, nodes = this.data?.nodes;
+    if (!q || !nodes) return [];
+    // A match in the epic's own id or title beats one in its milestone's name,
+    // which every epic of that milestone shares.
+    if (this.folded?.data !== this.data) this.folded = { data: this.data, text: nodes.map(n => [fold(`${n.title ?? ""} ${n.id}`), fold(n.milestone)]) };
+    if (this.found?.q === q && this.found.data === this.data) return this.found.hits;
+    const hits = [];
+    nodes.forEach((n, i) => {
+      const [own, ms] = this.folded.text[i], a = fuzzy(q, own), b = fuzzy(q, ms);
+      const sc = Math.max(a, b < 0 ? -1 : b - 30);
+      if (a >= 0 || b >= 0) hits.push({ n, sc });
+    });
+    hits.sort((a, b) => b.sc - a.sc);
+    this.found = { q, data: this.data, hits: hits.slice(0, HITS), total: hits.length };
+    return this.found.hits;
+  }
+
+  // The search's results, under the box. Mouse downs stop here, so a click on a
+  // row doesn't also reach the map underneath (a pan, or a select there).
+  results(t) {
+    const hits = this.hits();
+    if (!this.query) return null;
+    const total = this.found?.total ?? 0;
+    return v_flex().id("search-results").absolute().top(34).right(10).w(380).p(4).rounded(8)
+      .border_1().border_color(t.border).bg(t.popover).text_size(12)
+      .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
+      .on_scroll_wheel((_e, cx) => cx.stop_propagation())
+      .when(!hits.length, el => el.child(div().px(8).py(6).text_color(t.dim).child("No epic matches")))
+      .children(hits.map(({ n }, i) => h_flex().id(`hit-${i}`).h(30).px(8).gap(8).items_center().rounded(6).cursor_pointer()
+        .when(i === this.at, el => el.bg(t.hover))
+        .hover(s => s.bg(t.hover))
+        .on_mouse_down("left", (_e, cx) => { cx.stop_propagation(); this.goTo(n.id, cx, true); })
+        .child(div().size(8).flex_none().rounded(2).bg(look(t, n.status ?? n.state)[0]))
+        .child(div().flex_1().truncate().text_color(t.foreground).child(n.title || n.id))
+        .child(div().flex_none().text_size(11).text_color(t.dim).child(n.id))))
+      .when(total > hits.length, el => el.child(div().px(8).pt(4).pb(2).text_size(11).text_color(t.dim).child(`${total - hits.length} more: type more letters`)));
   }
 
   render() {
@@ -529,7 +616,8 @@ export default class Map extends View {
             cx.notify();
           })
           .child(this.canvas(t, g).absolute().left(-this.ox).top(-this.oy))));
-    return root;
+    // Last, so the results draw over the map.
+    return root.when(Boolean(this.query && this.listOpen && g), el => el.child(this.results(t)));
   }
 
   // The map, and beside or under it the selected epic.
