@@ -55,6 +55,8 @@ const KEEP = 120;
 const MIN_ZOOM = 0.05;
 // Empty columns between two milestones' blocks in a shared row.
 const GAP_COLS = 2;
+// The widest a milestone's block grows before a layer folds onto sub-lines.
+const FOLD = 10;
 
 // An epic's colour: tp's `status`, what its dashboard map colours by (tp ≥ 1.28).
 // An older tp has only the lifecycle `state`: a planned epic whose dependencies are
@@ -200,11 +202,14 @@ export default class Map extends View {
   //
   // In a row of several milestones tp interleaves their epics in the same
   // columns. Each milestone gets its own block of columns instead: blocks left to
-  // right by where tp put the milestone (its mean column), each as narrow as the
-  // milestone's fullest layer, GAP_COLS empty columns between blocks. Blocks that
-  // don't fit in tp's width wrap onto another line below, like text, so the map
-  // never grows wider than tp drew it (13 milestones on layers 69-79 needed 103
-  // columns of 77). Each line is centred. A row of one milestone keeps tp's columns.
+  // right by where tp put the milestone (its mean column), GAP_COLS empty columns
+  // between blocks. A block is as narrow as the milestone's fullest layer, but no
+  // wider than FOLD columns, or a third of that layer if wider: a layer with more
+  // epics folds onto 2-3 sub-lines (11-buro-konsolu had 23 epics in one layer),
+  // and every row of the map gets that layer's extra height. Blocks that don't
+  // fit in tp's width wrap onto another line below, like text, so the map never
+  // grows wider than tp drew it (13 milestones on layers 69-79 needed 103 columns
+  // of 77). Each line is centred. A row of one milestone keeps tp's columns.
   //
   // tp packs a row's columns toward where its edges lead, which can leave a small
   // row alone at the far edge (the first milestone's few roots, far right over
@@ -219,7 +224,8 @@ export default class Map extends View {
     }
     const rowOf = (layer) => Math.max(0, rows.findIndex(r => layer >= r.from && layer <= r.to));
     const x = (col) => PAD + col * (NW + GX);
-    const colOf = new globalThis.Map(), lineOf = new globalThis.Map(), byRow = rows.map(() => new globalThis.Map());
+    const colOf = new globalThis.Map(), lineOf = new globalThis.Map(), subOf = new globalThis.Map();
+    const byRow = rows.map(() => new globalThis.Map());
     for (const n of nodes) {
       const m = byRow[rowOf(n.layer)];
       if (!m) continue;
@@ -237,10 +243,12 @@ export default class Map extends View {
       return [...ms.values()].map(l => {
         const layers = new globalThis.Map();
         for (const n of l) { if (!layers.has(n.layer)) layers.set(n.layer, []); layers.get(n.layer).push(n); }
-        return { l, layers, w: Math.max(...[...layers.values()].map(v => v.length)), mean: l.reduce((a, n) => a + n.col, 0) / l.length };
+        const widest = Math.max(...[...layers.values()].map(v => v.length));
+        return { l, layers, w: widest > FOLD ? Math.max(FOLD, Math.ceil(widest / 3)) : widest, mean: l.reduce((a, n) => a + n.col, 0) / l.length };
       }).sort((a, b) => a.mean - b.mean);
     });
     for (const bl of lay) if (bl) cols = Math.max(cols, ...bl.map(b => b.w));   // a block wider than tp's map
+    const layerCount = Math.max(1, d.layers ?? 1), deep = new Array(layerCount).fill(1);
     const lines = rows.map(() => 1);
     lay.forEach((bl, i) => {
       if (!bl) return;
@@ -253,26 +261,37 @@ export default class Map extends View {
       }
       rowLines.forEach((line, k) => {
         const end = line[line.length - 1], off = (cols - (end.at + end.w)) / 2;
-        // Each layer's epics side by side in tp's order, centred in the block.
-        for (const b of line) for (const v of b.layers.values()) v.sort((p, q) => p.col - q.col)
-          .forEach((n, j) => { colOf.set(n.id, off + b.at + (b.w - v.length) / 2 + j); lineOf.set(n.id, k); });
+        // Each layer's epics side by side in tp's order, b.w to a sub-line, each
+        // sub-line centred in the block.
+        for (const b of line) for (const [layer, v] of b.layers) {
+          v.sort((p, q) => p.col - q.col);
+          deep[layer] = Math.max(deep[layer] ?? 1, Math.ceil(v.length / b.w));
+          v.forEach((n, j) => {
+            const sub = Math.floor(j / b.w), here = Math.min(b.w, v.length - sub * b.w);
+            colOf.set(n.id, off + b.at + (b.w - here) / 2 + (j % b.w)); lineOf.set(n.id, k); subOf.set(n.id, sub);
+          });
+        }
       });
       lines[i] = rowLines.length;
     });
+    // A layer's top: the layers above it, each as tall as its deepest fold.
+    const top = [0];
+    for (let l = 0; l < layerCount; l++) top.push(top[l] + (deep[l] ?? 1) * ROW);
+    const ly = (layer) => top[Math.min(Math.max(0, layer), layerCount)];
     // A row's line is its layers plus a header; lines after the first push later rows down.
-    const lineH = rows.map(r => (r.to - r.from + 1) * ROW + head);
+    const lineH = rows.map(r => ly(r.to + 1) - ly(r.from) + head);
     const extra = [];
     rows.forEach((_r, i) => { extra.push(i ? extra[i - 1] + (lines[i - 1] - 1) * lineH[i - 1] : 0); });
-    const y = (layer, line = 0) => { const i = rowOf(layer); return PAD + layer * ROW + (i + 1) * head + (extra[i] ?? 0) + line * (lineH[i] ?? 0); };
+    const y = (layer, line = 0, sub = 0) => { const i = rowOf(layer); return PAD + ly(layer) + sub * ROW + (i + 1) * head + (extra[i] ?? 0) + line * (lineH[i] ?? 0); };
     const col = (n) => colOf.get(n.id) ?? n.col;
     const span = rows.map(() => [Infinity, -Infinity]);
     for (const n of nodes) { const r = span[rowOf(n.layer)]; if (r) { r[0] = Math.min(r[0], col(n)); r[1] = Math.max(r[1], col(n)); } }
     const shift = span.map(([lo, hi], i) => !blocked[i] && hi >= lo && hi - lo + 1 < cols / 2 ? (cols - 1 - lo - hi) / 2 : 0);
     const at = new globalThis.Map();
-    for (const n of nodes) at.set(n.id, { n, x: x(col(n) + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer, lineOf.get(n.id) ?? 0) });
+    for (const n of nodes) at.set(n.id, { n, x: x(col(n) + (shift[rowOf(n.layer)] ?? 0)), y: y(n.layer, lineOf.get(n.id) ?? 0, subOf.get(n.id) ?? 0) });
     const width = x(cols) + PAD;
     const lastLayer = Math.max(0, (d.layers ?? 1) - 1);
-    const height = y(lastLayer, lines[rowOf(lastLayer)] - 1) + NH + PAD;
+    const height = y(lastLayer, lines[rowOf(lastLayer)] - 1, (deep[lastLayer] ?? 1) - 1) + NH + PAD;
     const count = new globalThis.Map(), left = new globalThis.Map();
     for (const { n, x: nx } of at.values()) {
       count.set(n.milestone, (count.get(n.milestone) ?? 0) + 1);
@@ -297,7 +316,7 @@ export default class Map extends View {
         for (const l of [...mine].reverse()) { l.x = Math.max(PAD, Math.min(l.x, limit - wide(l.text))); limit = l.x; }
         labels.push(...mine);
       }
-      return { i, labels, lines: lines[i], lineH: lineH[i], top: y(r.from) - head, bottom: y(r.to, lines[i] - 1) + NH + 10 };
+      return { i, labels, lines: lines[i], lineH: lineH[i], top: y(r.from) - head, bottom: y(r.to, lines[i] - 1, (deep[r.to] ?? 1) - 1) + NH + 10 };
     });
     return { at, width, height, bandBoxes, labelPx: px };
   }
