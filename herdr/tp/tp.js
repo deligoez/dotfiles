@@ -141,6 +141,29 @@ export function card(t, task, opts = {}) {
       .child(div().text_size(11 * s).text_color(task.lane === "wip" ? t.working : t.muted).truncate().child(task.line)));
 }
 
+// `r` reloads a view at once (the spec, the epic graph), for a change its watch
+// missed. The keys reach the view through view.keys (a focus handle made in
+// init), which takes the keyboard when the view is pressed: on el itself with
+// press, or from dragPan. Not while view.typing (a text field has the keys).
+// The header shows "reloaded" for a moment (reloadedNote).
+export function reloadKey(el, view, reload, press) {
+  return el.track_focus(view.keys)
+    .when(Boolean(press), e => e.on_mouse_down("left", () => view.keys.focus()))
+    .on_key_down((e, cx) => {
+      const m = e.modifiers ?? {};
+      if (e.key !== "r" || m.platform || m.control || m.alt || view.typing) return;
+      cx.stop_propagation();
+      view.reloaded = Date.now();
+      reload(cx);
+      cx.timer.after(1600, (cx) => cx.notify());
+      cx.notify();
+    });
+}
+export function reloadedNote(t, view) {
+  return view.reloaded && Date.now() - view.reloaded < 1500
+    ? div().flex_none().text_size(11).text_color(t.dim).child("↻ reloaded") : null;
+}
+
 // Press and drag to pan a view we scroll ourselves (gpui's scroll offset can't be
 // set from a script). apply(dx, dy) moves the content by the pointer's motion in
 // layout px; click(e, cx), if given, runs on a release that did not drag. A drag
@@ -149,7 +172,7 @@ export function card(t, task, opts = {}) {
 export function dragPan(el, view, apply, click) {
   const zoom = () => Number(settings()?.zoom) || 1;
   return el.when(Boolean(view.drag?.moved), e => e.cursor_grabbing())
-    .on_mouse_down("left", (e) => { view.drag = { x: e.position.x, y: e.position.y, dx: 0, dy: 0, moved: false }; view.dragMoved = false; })
+    .on_mouse_down("left", (e) => { view.keys?.focus(); view.drag = { x: e.position.x, y: e.position.y, dx: 0, dy: 0, moved: false }; view.dragMoved = false; })
     .on_mouse_move((e, cx) => {
       const d = view.drag;
       if (!d) return;
@@ -259,6 +282,7 @@ export class TpView extends View {
     this.selected = null;   // the task in the detail panel
     this.size = { width: 800, height: 600 };
     this.watches = [];
+    this.keys = cx.focus_handle();   // `r`: see reloadKey
     if (checking()) return;
     this.loadList(cx);
     // Durations ("running 12 min") age; a slow tick also covers a missed watch.
@@ -364,6 +388,7 @@ export class TpView extends View {
           .on_click((_e, cx) => { this.picking = !this.picking; if (this.picking) this.loadList(cx); cx.notify(); })
           .child(div().min_w(0).truncate().text_size(12.5).text_color(t.foreground).child(title))
           .child(div().flex_none().text_size(10).text_color(t.dim).child(this.picking ? "▴" : "▾")))
+        .when(Boolean(reloadedNote(t, this)), el => el.child(reloadedNote(t, this)))
         .when(tasks.length > 0, el => el.child(div().flex_none().text_size(11).text_color(t.muted)
           .child(counts))))
       .when(this.picking, el => el.child(this.picker(t)));
@@ -388,7 +413,8 @@ export class TpView extends View {
 
   render(cx) {
     const t = theme();
-    return v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground)
+    // `r` reads the spec list and the spec again (loadList, then reload).
+    return reloadKey(v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground), this, (cx) => this.loadList(cx), true)
       // Reported in window pixels; the layout's px are scaled by the app's zoom.
       .on_size_change((size, cx) => {
         const z = Number(settings()?.zoom) || 1;
