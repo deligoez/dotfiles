@@ -8,7 +8,7 @@
 import { View, div, svg, PathBuilder, Background } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, settings, props, watchFolder, checking, exec } from "herdr";
-import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan } from "./tp.js";
+import { tpRaw, serial, MONO, detailPanel, panelBox, dragPan, reloadKey, reloadedNote } from "./tp.js";
 
 const PAD = 16, NW = 118, NH = 22, GX = 12, ROW = 46, BAND_HEAD = 26;
 
@@ -98,6 +98,9 @@ export default class Map extends View {
     this.query = ""; this.at = 0; this.listOpen = false;
     this.search = InputState.new({ placeholder: "Search epics…" });
     this.search.on("change", (_e, cx) => { this.query = fold(this.search.value().trim()); this.at = 0; this.listOpen = true; cx.notify(); });
+    this.search.on("focus", () => { this.typing = true; });
+    this.search.on("blur", () => { this.typing = false; });
+    this.keys = cx.focus_handle();   // `r` reloads: see reloadKey in tp.js
     this.search.on("submit", (_e, cx) => { const h = this.hits()[this.at]; if (h) this.goTo(h.n.id, cx, true); });
     this.root = props()?.root ?? null;
     this.data = null;
@@ -132,8 +135,11 @@ export default class Map extends View {
   async close() { for (const w of this.watches) w.cancel(); this.search?.release(); }
 
   // One load at a time (a burst of watch events is one more load). The same
-  // layout as last time changes nothing: no parse, no new paths.
-  reload(cx) {
+  // layout as last time changes nothing: no parse, no new paths. force (the `r`
+  // key) also reads the open epic's text again: an edited description leaves
+  // the layout as it was.
+  reload(cx, force) {
+    if (force && this.selected) this.fetchEpic(this.selected, cx, true);
     this.load ??= serial(async (cx) => {
       try {
         const raw = await tpRaw(["epic", "layout", "--json"], this.root);
@@ -309,11 +315,12 @@ export default class Map extends View {
       .when(nodes.length > 0, el => el.child(div().text_size(11).text_color(t.muted)
         .child(`${nodes.length} epics · ${done} done · ${claimed} started · ${(this.data.bands ?? []).length} milestones`)))
       .child(div().flex_1())
+      .when(Boolean(reloadedNote(t, this)), el => el.child(reloadedNote(t, this)))
       .when(nodes.length > 0, el => el.child(h_flex().id("search").w(220).h(24).px(7).gap(6).items_center().rounded(6)
         .border_1().border_color(this.query ? t.accent : t.border).bg(t.background)
         .on_key_down((e, cx) => {
           const n = this.hits().length;
-          if (e.key === "escape") { this.search.set_value(""); this.query = ""; this.search.blur(); }
+          if (e.key === "escape") { this.search.set_value(""); this.query = ""; this.search.blur(); this.keys.focus(); }
           // The first arrow after a pick shows the list again, where it was.
           else if ((e.key === "down" || e.key === "up") && n && !this.listOpen) this.listOpen = true;
           else if (e.key === "down" && n) this.at = (this.at + 1) % n;
@@ -586,7 +593,9 @@ export default class Map extends View {
       this.ox = Math.max(kx - view.width, Math.min(this.ox, mw - kx));
       this.oy = Math.max(ky - view.height, Math.min(this.oy, mh - ky));
     }
-    const root = v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground).relative()
+    // `r` reloads; the map view takes the keyboard when pressed (dragPan), not
+    // the whole pane, so a click in the search box keeps its keys.
+    const root = reloadKey(v_flex().id("root").size_full().bg(t.surface).text_color(t.foreground).relative(), this, (cx) => this.reload(cx, true))
       // Reported in window pixels; the layout's px are scaled by the app's zoom.
       .on_size_change((size, cx) => {
         const z = Number(settings()?.zoom) || 1;
