@@ -116,6 +116,43 @@ function fuzzy(q, text) {
   }
   return score - text.length * 0.005;
 }
+
+// tp orders a line's blocks by where their epics sit, so 01-elle-pilot came
+// last, right of 04-ai-pilot. Read left to right they should go by milestone
+// name: re-pack each line's blocks in that order from the line's first column,
+// as far apart as tp put them, move their epics along and redraw the dividers.
+function byMilestone(d) {
+  const lines = new globalThis.Map(), shift = new globalThis.Map();
+  for (const b of d.blocks) {
+    const k = `${b.row}|${b.line}`;
+    if (!lines.has(k)) lines.set(k, []);
+    lines.get(k).push(b);
+  }
+  const blocks = [], dividers = [];
+  for (const line of lines.values()) {
+    const byCol = [...line].sort((a, b) => a.from_col - b.from_col);
+    let gap = Infinity;
+    for (let i = 1; i < byCol.length; i++) gap = Math.min(gap, byCol[i].from_col - byCol[i - 1].to_col);
+    if (!Number.isFinite(gap)) gap = 2;
+    const ys = (d.dividers ?? []).filter(v => v.row === line[0].row && v.line === line[0].line);
+    const top = ys.length ? Math.min(...ys.map(v => v.from_y)) : line[0].line_y;
+    const bottom = ys.length ? Math.max(...ys.map(v => v.to_y)) : Math.max(...line.map(b => b.to_y));
+    let col = byCol[0].from_col;
+    [...line].sort((a, b) => a.milestone.localeCompare(b.milestone)).forEach((b, i) => {
+      if (i) dividers.push({ row: b.row, line: b.line, x: col - gap / 2, from_y: top, to_y: bottom });
+      shift.set(b, col - b.from_col);
+      blocks.push({ ...b, from_col: col, to_col: col + b.to_col - b.from_col });
+      col += b.to_col - b.from_col + gap;
+    });
+  }
+  // An epic belongs to its milestone's block whose rows hold it.
+  const nodes = (d.nodes ?? []).map(n => {
+    const b = d.blocks.find(b => b.milestone === n.milestone && n.y >= b.from_y && n.y <= b.to_y);
+    const k = b ? shift.get(b) : 0;
+    return k ? { ...n, x: n.x + k } : n;
+  });
+  return { blocks, dividers, nodes };
+}
 const HITS = 8;
 
 export default class Map extends View {
@@ -246,6 +283,8 @@ export default class Map extends View {
       // epic); its y a layer row, every line's header one row of its own. A
       // header row is drawn `head` high, the rest ROW.
       const U = NW + GX, X = (c) => PAD + c * U;
+      const sorted = byMilestone(d);
+      nodes = sorted.nodes;
       const heads = [...new Set(d.blocks.map(b => b.line_y))].sort((a, b) => a - b);
       const Y = (y) => { let k = 0; while (k < heads.length && heads[k] < y) k++; return PAD + y * ROW + k * (head - ROW); };
       const at = new globalThis.Map(nodes.map(n => [n.id, { n, x: X(n.x), y: Y(n.y) }]));
@@ -254,7 +293,7 @@ export default class Map extends View {
       const bandBoxes = d.rows.map((r, i) => {
         const top = Y(r.from_y), labels = [];
         const lines = new globalThis.Map();
-        for (const b of d.blocks.filter(b => b.row === i)) {
+        for (const b of sorted.blocks.filter(b => b.row === i)) {
           if (!lines.has(b.line)) lines.set(b.line, []);
           lines.get(b.line).push({ text: `${b.milestone} · ${b.count}`, dy: Y(b.line_y) - top, x: X(b.from_col) });
         }
@@ -269,7 +308,7 @@ export default class Map extends View {
         }
         return { i, labels, top, bottom: Y(r.to_y) + NH + 10 };
       });
-      const dividers = (d.dividers ?? []).map(v => ({ x: X(v.x) + NW / 2, top: Y(v.from_y) + 4, bottom: Y(v.to_y) + NH + 6 }));
+      const dividers = sorted.dividers.map(v => ({ x: X(v.x) + NW / 2, top: Y(v.from_y) + 4, bottom: Y(v.to_y) + NH + 6 }));
       return { at, width, height, bandBoxes, dividers, labelPx: px };
     }
     const rows = [];
