@@ -153,6 +153,40 @@ function byMilestone(d) {
   });
   return { blocks, dividers, nodes };
 }
+
+// tp's critical path counts open work only, so it starts below the done epics
+// that led to it (Tedarik Zinciri-I, under the done Geliştirme Ortamı-I). The
+// done chain into its start is drawn too, fainter: from that start back through
+// the done epic with the longest done chain behind it, to a root. Edge keys are
+// "from\nto".
+function leadEdges(d) {
+  const edges = d.edges ?? [], done = new Set((d.nodes ?? []).filter(n => n.state === "done").map(n => n.id));
+  const ins = new globalThis.Map(), critTo = new Set();
+  for (const e of edges) {
+    if (!ins.has(e.to)) ins.set(e.to, []);
+    ins.get(e.to).push(e.from);
+    if (e.critical) critTo.add(e.to);
+  }
+  const depth = new globalThis.Map();
+  const deep = (id) => {
+    if (depth.has(id)) return depth.get(id);
+    depth.set(id, 0);
+    const k = Math.max(0, ...(ins.get(id) ?? []).filter(f => done.has(f)).map(f => deep(f) + 1));
+    depth.set(id, k);
+    return k;
+  };
+  const lead = new Set();
+  for (const e of edges) {
+    if (!e.critical || critTo.has(e.from)) continue;
+    for (let at = e.from; ;) {
+      const from = (ins.get(at) ?? []).filter(f => done.has(f)).sort((a, b) => deep(b) - deep(a))[0];
+      if (!from || lead.has(`${from}\n${at}`)) break;
+      lead.add(`${from}\n${at}`);
+      at = from;
+    }
+  }
+  return lead;
+}
 const HITS = 8;
 
 export default class Map extends View {
@@ -635,10 +669,10 @@ export default class Map extends View {
     // (siyakat's whole map on a 3440 px screen: "interrupted"): it stays coarse.
     if (!cells.length || cells.reduce((n, c) => n + c.n, 0) > MAX_PIECES) cells = fast;
     const plain = [], critical = [];
-    for (const c of cells) for (const kp of c.paths) (kp[0] === "critical" ? critical : plain).push(kp);
+    for (const c of cells) for (const kp of c.paths) (kp[0] === "plain" ? plain : critical).push(kp);
     const strokes = [...plain, ...critical, ...(this.chosen ? [["chosen", this.chosen]] : [])];
     const faint = Math.max(0.08, Math.min(0.35, 120 / Math.max(1, edges.length)));
-    const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), chosen: Background.solid(t.accent) };
+    const stroke = { plain: Background.solid(t.dim).opacity(sel ? faint / 2 : faint), critical: Background.solid(t.blocked).opacity(0.75), lead: Background.solid(t.blocked).opacity(0.3), chosen: Background.solid(t.accent) };
     // Labels only from 45% up, and only for the epics in view (and a margin).
     const labels = s < 0.45 ? [] : [...g.at.values()].filter(({ x, y }) => (x + NW) * s >= this.ox - m && x * s <= this.ox + v.width + m
       && (y + NH) * s >= this.oy - m && y * s <= this.oy + v.height + m);
@@ -736,7 +770,8 @@ export default class Map extends View {
   // `pieces`, when given, is the count for every curve (the in-motion level).
   // Goes on from edge `job.i` until 8 ms after t0; true once every edge is in.
   strokeStep(job, t0) {
-    const CHUNK = 1500, width = { plain: 1, critical: 1.6 };
+    const CHUNK = 1500, width = { plain: 1, critical: 1.6, lead: 1.6 };
+    const lead = job.lead ??= leadEdges(job.b.data);
     const g = job.b.g, edges = job.b.data.edges ?? [], lod = job.lod, cells = job.cells;
     const X = pctX(g), Y = pctY(g);
     for (; job.i < edges.length; job.i++) {
@@ -744,7 +779,7 @@ export default class Map extends View {
       const e = edges[job.i];
       const a = g.at.get(e.from), b = g.at.get(e.to);
       if (!a || !b) continue;
-      const kind = e.critical ? "critical" : "plain";
+      const kind = e.critical ? "critical" : lead.has(`${e.from}\n${e.to}`) ? "lead" : "plain";
       const len = Math.hypot(b.x - a.x, b.y - a.y - NH) * lod;
       const pts = polyline(a, b, job.pieces ?? Math.max(2, Math.min(24, Math.ceil(len / 40))));
       for (let i = 1; i < pts.length; i++) {
