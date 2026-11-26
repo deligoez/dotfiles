@@ -890,6 +890,11 @@ export default class Map extends View {
               if (e.click_count >= 2) { this.moved(cx); const p = this.local(e); this.zoomAt(e.modifiers?.shift ? 1 / 1.6 : 1.6, p.x, p.y); cx.notify(); return; }
               const id = this.hit(e); this.select(id && id !== this.selected ? id : null, cx);
             })
+          // A right double-click zooms out around the pointer.
+          .on_mouse_down("right", (e, cx) => {
+            if (e.click_count < 2) return;
+            this.moved(cx); const p = this.local(e); this.zoomAt(1 / 1.6, p.x, p.y); cx.notify();
+          })
           .on_pinch((e, cx) => { this.moved(cx); const p = this.local(e); this.zoomAt(1 + e.delta, p.x, p.y); cx.notify(); })
           .on_scroll_wheel((e, cx) => {
             cx.stop_propagation();
