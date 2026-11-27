@@ -1,3 +1,7 @@
+# Hosts that must not be public (servers, their addresses) live in
+# ~/.ssh/config.d/, outside this repo.
+Include config.d/*
+
 Host *
   AddKeysToAgent yes
   UseKeychain yes
@@ -7,3 +11,21 @@ Host github.com
   HostName github.com
   User git
   IdentityFile ~/.ssh/id_ed25519
+
+# Mac mini, the agent server. One name, two routes: mini.local over mDNS at
+# home, the WireGuard address anywhere else. ssh keeps the first value it gets
+# for a setting, so when mini.local answers a ping the Match sets it, and when
+# it doesn't the Host block's VPN address stays. Herdr's "mini" machine is the
+# same machine both ways. `|| false`: ping exits 68 when the name doesn't
+# resolve, which ssh takes as an error, not a no.
+Match originalhost mini exec "ping -c1 -t1 mini.local >/dev/null 2>&1 || false"
+  HostName mini.local
+
+Host mini
+  HostName 10.8.0.9
+  User mini
+  ServerAliveInterval 30
+  ServerAliveCountMax 4
+  ControlMaster auto
+  ControlPath ~/.ssh/cm/%r@%h:%p
+  ControlPersist 1200
